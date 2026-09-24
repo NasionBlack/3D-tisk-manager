@@ -461,29 +461,33 @@
         initGoogleAuth();
     };
 
-    // MIGRACE & SANITACE DATA (Opravuje 'undefined' a chybějící ID ze starších verzí)
+    // MIGRACE & SANITACE DATA (Sjednocení názvů klíčů pro filamenty i zařízení)
     function sanitizeAndMigrateData() {
         if (!Array.isArray(appData.filaments)) appData.filaments = [];
         if (!Array.isArray(appData.devices)) appData.devices = [];
         if (!Array.isArray(appData.history)) appData.history = [];
         if (!appData.settings) appData.settings = { energyPrice: 6.0, hourlyRate: 250 };
 
-        appData.filaments.forEach((f, index) => {
-            if (!f.id) f.id = 'fil_' + Date.now() + '_' + index;
-            if (f.vendor === undefined) f.vendor = f.brand || f.manufacturer || 'Neznámý';
-            if (f.type === undefined) f.type = f.material || f.materialType || 'PLA';
-            if (f.colorName === undefined) f.colorName = f.color || f.name || 'Základní';
-            if (f.colorHex === undefined) f.colorHex = f.hex || '#00adb5';
-            if (f.price === undefined) f.price = parseFloat(f.cost || f.pricePerSpool || 0);
-            if (f.weight === undefined) f.weight = parseFloat(f.weightG || f.remainingWeight || f.weightRemaining || 1000);
+        appData.filaments = appData.filaments.map((f, index) => {
+            const vendor = f.vendor ?? f.brand ?? f.manufacturer ?? 'Neznámý';
+            const type = f.type ?? f.material ?? f.materialType ?? 'PLA';
+            const colorName = f.colorName ?? f.color ?? f.name ?? 'Základní';
+            const colorHex = f.colorHex ?? f.hex ?? '#00adb5';
+            const price = parseFloat(f.price ?? f.cost ?? f.pricePerSpool ?? 0);
+            const weight = parseFloat(f.weight ?? f.weightG ?? f.remainingWeight ?? f.weightRemaining ?? 0);
+            const id = (f.id && String(f.id).trim() !== '') ? String(f.id) : ('fil_' + Date.now() + '_' + index);
+
+            return { id, vendor, type, colorName, colorHex, price, weight };
         });
 
-        appData.devices.forEach((d, index) => {
-            if (!d.id) d.id = 'dev_' + Date.now() + '_' + index;
-            if (d.name === undefined) d.name = d.title || 'Zařízení ' + (index + 1);
-            if (d.model === undefined) d.model = d.printerModel || 'Nespecifikováno';
-            if (d.power === undefined) d.power = parseFloat(d.powerW || d.consumption || 150);
-            if (d.amortization === undefined) d.amortization = parseFloat(d.amortizationPerHour || d.wearCost || 0);
+        appData.devices = appData.devices.map((d, index) => {
+            const name = d.name ?? d.title ?? ('Zařízení ' + (index + 1));
+            const model = d.model ?? d.printerModel ?? 'Nespecifikováno';
+            const power = parseFloat(d.power ?? d.powerW ?? d.consumption ?? 150);
+            const amortization = parseFloat(d.amortization ?? d.amortizationPerHour ?? d.wearCost ?? 0);
+            const id = (d.id && String(d.id).trim() !== '') ? String(d.id) : ('dev_' + Date.now() + '_' + index);
+
+            return { id, name, model, power, amortization };
         });
 
         saveLocalData();
@@ -645,18 +649,22 @@
         e.preventDefault();
         const id = document.getElementById('filamentId').value;
         const filament = {
-            id: id || 'fil_' + Date.now().toString(),
+            id: id || ('fil_' + Date.now().toString()),
             vendor: document.getElementById('filVendor').value,
             type: document.getElementById('filType').value,
             colorName: document.getElementById('filColorName').value,
             colorHex: document.getElementById('filColorHex').value,
-            price: parseFloat(document.getElementById('filPrice').value),
-            weight: parseFloat(document.getElementById('filWeight').value)
+            price: parseFloat(document.getElementById('filPrice').value) || 0,
+            weight: parseFloat(document.getElementById('filWeight').value) || 0
         };
 
         if (id) {
-            const index = appData.filaments.findIndex(f => f.id === id);
-            if (index !== -1) appData.filaments[index] = filament;
+            const index = appData.filaments.findIndex(f => String(f.id) === String(id));
+            if (index !== -1) {
+                appData.filaments[index] = filament;
+            } else {
+                appData.filaments.push(filament);
+            }
         } else {
             appData.filaments.push(filament);
         }
@@ -666,7 +674,7 @@
     }
 
     function editFilament(id) {
-        const fil = appData.filaments.find(f => f.id === id);
+        const fil = appData.filaments.find(f => String(f.id) === String(id));
         if (!fil) return;
         document.getElementById('filamentId').value = fil.id;
         document.getElementById('filVendor').value = fil.vendor;
@@ -679,7 +687,7 @@
     }
 
     function duplicateFilament(id) {
-        const fil = appData.filaments.find(f => f.id === id);
+        const fil = appData.filaments.find(f => String(f.id) === String(id));
         if (!fil) return;
         const newFil = { ...fil, id: 'fil_' + Date.now().toString(), colorName: fil.colorName + ' (Kopie)' };
         appData.filaments.push(newFil);
@@ -688,7 +696,7 @@
 
     function deleteFilament(id) {
         if (confirm('Opravdu chcete odstranit tento filament?')) {
-            appData.filaments = appData.filaments.filter(f => f.id !== id);
+            appData.filaments = appData.filaments.filter(f => String(f.id) !== String(id));
             saveData();
         }
     }
@@ -736,16 +744,20 @@
         e.preventDefault();
         const id = document.getElementById('deviceId').value;
         const device = {
-            id: id || 'dev_' + Date.now().toString(),
+            id: id || ('dev_' + Date.now().toString()),
             name: document.getElementById('devName').value,
             model: document.getElementById('devModel').value,
-            power: parseFloat(document.getElementById('devPower').value),
-            amortization: parseFloat(document.getElementById('devAmortization').value)
+            power: parseFloat(document.getElementById('devPower').value) || 0,
+            amortization: parseFloat(document.getElementById('devAmortization').value) || 0
         };
 
         if (id) {
-            const index = appData.devices.findIndex(d => d.id === id);
-            if (index !== -1) appData.devices[index] = device;
+            const index = appData.devices.findIndex(d => String(d.id) === String(id));
+            if (index !== -1) {
+                appData.devices[index] = device;
+            } else {
+                appData.devices.push(device);
+            }
         } else {
             appData.devices.push(device);
         }
@@ -755,7 +767,7 @@
     }
 
     function editDevice(id) {
-        const dev = appData.devices.find(d => d.id === id);
+        const dev = appData.devices.find(d => String(d.id) === String(id));
         if (!dev) return;
         document.getElementById('deviceId').value = dev.id;
         document.getElementById('devName').value = dev.name;
@@ -766,7 +778,7 @@
     }
 
     function duplicateDevice(id) {
-        const dev = appData.devices.find(d => d.id === id);
+        const dev = appData.devices.find(d => String(d.id) === String(id));
         if (!dev) return;
         const newDev = { ...dev, id: 'dev_' + Date.now().toString(), name: dev.name + ' (Kopie)' };
         appData.devices.push(newDev);
@@ -775,7 +787,7 @@
 
     function deleteDevice(id) {
         if (confirm('Opravdu chcete odstranit toto zařízení?')) {
-            appData.devices = appData.devices.filter(d => d.id !== id);
+            appData.devices = appData.devices.filter(d => String(d.id) !== String(id));
             saveData();
         }
     }
@@ -824,8 +836,8 @@
         const filId = document.getElementById('printFilament').value;
         const devId = document.getElementById('printDevice').value;
 
-        const filament = appData.filaments.find(f => f.id === filId);
-        const device = appData.devices.find(d => d.id === devId);
+        const filament = appData.filaments.find(f => String(f.id) === String(filId));
+        const device = appData.devices.find(d => String(d.id) === String(devId));
 
         if (!filament || !device) {
             alert('Vyberte platný filament a zařízení.');
@@ -922,7 +934,7 @@
     }
 
     function repeatPrint(id) {
-        const item = appData.history.find(h => h.id === id);
+        const item = appData.history.find(h => String(h.id) === String(id));
         if (!item) return;
 
         const navBtns = document.querySelectorAll('aside nav button');
@@ -943,7 +955,7 @@
 
     function deleteHistoryItem(id) {
         if (confirm('Odstranit tento záznam z historie?')) {
-            appData.history = appData.history.filter(h => h.id !== id);
+            appData.history = appData.history.filter(h => String(h.id) !== String(id));
             saveData();
         }
     }
