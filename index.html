@@ -392,10 +392,7 @@
         <!-- NASTAVENÍ -->
         <div id="tab-settings" class="tab-content">
             <div class="card">
-                <h2>Globální nastavení sazeb</h2>
-                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
-                    Změna těchto hodnot se projeví pouze u nově vytvářených tisků. U již uložených tisků v historii zůstávají zachovány původní výpočetní hodnoty.
-                </p>
+                <h2>Globální nastavení sazeb a integrací</h2>
                 <form onsubmit="saveSettings(event)">
                     <div class="grid-2">
                         <div class="form-group">
@@ -407,8 +404,21 @@
                             <input type="number" id="setHourlyRate" required step="1" min="0">
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label>Google OAuth Client ID (pro synchronizaci s Diskem)</label>
+                        <input type="text" id="setGoogleClientId" placeholder="xxxxxxxxxxxx-xxxxxxxxxxxxxxxx.apps.googleusercontent.com">
+                        <small style="color: var(--text-muted); display: block; margin-top: 4px;">Vyžadováno pro přihlášení k uložení dat na Google Disk. Vytvořte si Client ID v Google Cloud Console.</small>
+                    </div>
                     <button type="submit" class="btn">Uložit nastavení</button>
                 </form>
+            </div>
+
+            <div class="card" style="border-color: var(--danger);">
+                <h2 style="color: var(--danger);">Správa a vyčištění vyrovnávací paměti</h2>
+                <p style="color: var(--text-muted); margin-bottom: 1rem;">
+                    Pokud se vám v aplikaci zobrazují staré nebo neodstranitelné záznamy z předchozí verze, můžete lokální databázi vyčistit.
+                </p>
+                <button class="btn btn-danger" onclick="clearLocalStorage()">Vyčistit paměť aplikace (Smazat stará data)</button>
             </div>
         </div>
 
@@ -438,7 +448,6 @@
 </div>
 
 <script>
-    const GOOGLE_CLIENT_ID = '356611411545-qvef11s5ll4fto21o28drt9oaqk93oij.apps.googleusercontent.com';
     const DRIVE_FILE_NAME = '3d_tisk_manager_data.json';
 
     let appData = {
@@ -447,7 +456,8 @@
         history: [],
         settings: {
             energyPrice: 6.0,
-            hourlyRate: 250
+            hourlyRate: 250,
+            googleClientId: ''
         }
     };
 
@@ -461,12 +471,12 @@
         initGoogleAuth();
     };
 
-    // MIGRACE & SANITACE DATA (Sjednocení názvů klíčů pro filamenty i zařízení)
+    // MIGRACE & SANITACE DATA (Zajišťuje jednoznačné ID u všech položek a odstraňuje nekorektní záznamy)
     function sanitizeAndMigrateData() {
         if (!Array.isArray(appData.filaments)) appData.filaments = [];
         if (!Array.isArray(appData.devices)) appData.devices = [];
         if (!Array.isArray(appData.history)) appData.history = [];
-        if (!appData.settings) appData.settings = { energyPrice: 6.0, hourlyRate: 250 };
+        if (!appData.settings) appData.settings = { energyPrice: 6.0, hourlyRate: 250, googleClientId: '' };
 
         appData.filaments = appData.filaments.map((f, index) => {
             const vendor = f.vendor ?? f.brand ?? f.manufacturer ?? 'Neznámý';
@@ -475,7 +485,7 @@
             const colorHex = f.colorHex ?? f.hex ?? '#00adb5';
             const price = parseFloat(f.price ?? f.cost ?? f.pricePerSpool ?? 0);
             const weight = parseFloat(f.weight ?? f.weightG ?? f.remainingWeight ?? f.weightRemaining ?? 0);
-            const id = (f.id && String(f.id).trim() !== '') ? String(f.id) : ('fil_' + Date.now() + '_' + index);
+            const id = (f.id !== undefined && f.id !== null && String(f.id).trim() !== '') ? String(f.id) : ('fil_' + Date.now() + '_' + index);
 
             return { id, vendor, type, colorName, colorHex, price, weight };
         });
@@ -485,7 +495,7 @@
             const model = d.model ?? d.printerModel ?? 'Nespecifikováno';
             const power = parseFloat(d.power ?? d.powerW ?? d.consumption ?? 150);
             const amortization = parseFloat(d.amortization ?? d.amortizationPerHour ?? d.wearCost ?? 0);
-            const id = (d.id && String(d.id).trim() !== '') ? String(d.id) : ('dev_' + Date.now() + '_' + index);
+            const id = (d.id !== undefined && d.id !== null && String(d.id).trim() !== '') ? String(d.id) : ('dev_' + Date.now() + '_' + index);
 
             return { id, name, model, power, amortization };
         });
@@ -505,40 +515,57 @@
 
     // --- GOOGLE DRIVE AUTH & SYNC ---
     function initGoogleAuth() {
-        if (typeof google === 'undefined') return;
+        const clientId = appData.settings?.googleClientId?.trim();
+        if (typeof google === 'undefined' || !clientId) return;
         
-        tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/drive.file',
-            callback: (response) => {
-                if (response.access_token) {
-                    accessToken = response.access_token;
-                    const remember = document.getElementById('rememberMe').checked;
-                    const storage = remember ? localStorage : sessionStorage;
-                    storage.setItem('gdrive_token', accessToken);
-                    
-                    updateAuthUI(true);
-                    syncWithDrive();
-                }
-            },
-        });
+        try {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: clientId,
+                scope: 'https://www.googleapis.com/auth/drive.file',
+                callback: (response) => {
+                    if (response.access_token) {
+                        accessToken = response.access_token;
+                        const remember = document.getElementById('rememberMe').checked;
+                        const storage = remember ? localStorage : sessionStorage;
+                        storage.setItem('gdrive_token', accessToken);
+                        
+                        updateAuthUI(true);
+                        syncWithDrive();
+                    }
+                },
+            });
 
-        const savedToken = localStorage.getItem('gdrive_token') || sessionStorage.getItem('gdrive_token');
-        if (savedToken) {
-            accessToken = savedToken;
-            updateAuthUI(true);
-            syncWithDrive();
+            const savedToken = localStorage.getItem('gdrive_token') || sessionStorage.getItem('gdrive_token');
+            if (savedToken) {
+                accessToken = savedToken;
+                updateAuthUI(true);
+                syncWithDrive();
+            }
+        } catch(e) {
+            console.error('Chyba inicializace Google Auth:', e);
         }
     }
 
     function handleAuth() {
+        const clientId = appData.settings?.googleClientId?.trim();
+        if (!clientId) {
+            alert('Nejprve zadejte platné Google OAuth Client ID v Nastavení!');
+            switchTab('settings', document.querySelectorAll('aside nav button')[4]);
+            return;
+        }
+
         if (accessToken) {
             accessToken = null;
             localStorage.removeItem('gdrive_token');
             sessionStorage.removeItem('gdrive_token');
             updateAuthUI(false);
         } else {
-            tokenClient.requestAccessToken({ prompt: '' });
+            if (!tokenClient) initGoogleAuth();
+            if (tokenClient) {
+                tokenClient.requestAccessToken({ prompt: '' });
+            } else {
+                alert('Chyba: Nepodařilo se inicializovat přihlašovací modul.');
+            }
         }
     }
 
@@ -629,6 +656,20 @@
         }
     }
 
+    function clearLocalStorage() {
+        if (confirm('Opravdu chcete vymazat všechna lokálně uložená data aplikace?')) {
+            localStorage.removeItem('3d_tisk_data');
+            appData = {
+                filaments: [],
+                devices: [],
+                history: [],
+                settings: { energyPrice: 6.0, hourlyRate: 250, googleClientId: '' }
+            };
+            renderAll();
+            alert('Paměť byla vyčištěna.');
+        }
+    }
+
     function saveData() {
         saveLocalData();
         saveToDrive();
@@ -647,19 +688,19 @@
     // --- SKLAD FILAMENTŮ ---
     function saveFilament(e) {
         e.preventDefault();
-        const id = document.getElementById('filamentId').value;
+        const id = document.getElementById('filamentId').value.trim();
         const filament = {
             id: id || ('fil_' + Date.now().toString()),
-            vendor: document.getElementById('filVendor').value,
-            type: document.getElementById('filType').value,
-            colorName: document.getElementById('filColorName').value,
+            vendor: document.getElementById('filVendor').value.trim(),
+            type: document.getElementById('filType').value.trim(),
+            colorName: document.getElementById('filColorName').value.trim(),
             colorHex: document.getElementById('filColorHex').value,
             price: parseFloat(document.getElementById('filPrice').value) || 0,
             weight: parseFloat(document.getElementById('filWeight').value) || 0
         };
 
         if (id) {
-            const index = appData.filaments.findIndex(f => String(f.id) === String(id));
+            const index = appData.filaments.findIndex(f => String(f.id).trim() === String(id).trim());
             if (index !== -1) {
                 appData.filaments[index] = filament;
             } else {
@@ -674,7 +715,7 @@
     }
 
     function editFilament(id) {
-        const fil = appData.filaments.find(f => String(f.id) === String(id));
+        const fil = appData.filaments.find(f => String(f.id).trim() === String(id).trim());
         if (!fil) return;
         document.getElementById('filamentId').value = fil.id;
         document.getElementById('filVendor').value = fil.vendor;
@@ -687,7 +728,7 @@
     }
 
     function duplicateFilament(id) {
-        const fil = appData.filaments.find(f => String(f.id) === String(id));
+        const fil = appData.filaments.find(f => String(f.id).trim() === String(id).trim());
         if (!fil) return;
         const newFil = { ...fil, id: 'fil_' + Date.now().toString(), colorName: fil.colorName + ' (Kopie)' };
         appData.filaments.push(newFil);
@@ -696,7 +737,7 @@
 
     function deleteFilament(id) {
         if (confirm('Opravdu chcete odstranit tento filament?')) {
-            appData.filaments = appData.filaments.filter(f => String(f.id) !== String(id));
+            appData.filaments = appData.filaments.filter(f => String(f.id).trim() !== String(id).trim());
             saveData();
         }
     }
@@ -710,6 +751,10 @@
     function renderFilamentTable() {
         const tbody = document.getElementById('filamentTableBody');
         tbody.innerHTML = '';
+        if (appData.filaments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted)">Žádné filamenty ve skladu.</td></tr>';
+            return;
+        }
         appData.filaments.forEach(f => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -731,6 +776,13 @@
     function renderFilamentSelects() {
         const select = document.getElementById('printFilament');
         select.innerHTML = '';
+        if (appData.filaments.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '-- Nejprve přidejte filament do skladu --';
+            select.appendChild(opt);
+            return;
+        }
         appData.filaments.forEach(f => {
             const opt = document.createElement('option');
             opt.value = f.id;
@@ -742,17 +794,17 @@
     // --- ZAŘÍZENÍ ---
     function saveDevice(e) {
         e.preventDefault();
-        const id = document.getElementById('deviceId').value;
+        const id = document.getElementById('deviceId').value.trim();
         const device = {
             id: id || ('dev_' + Date.now().toString()),
-            name: document.getElementById('devName').value,
-            model: document.getElementById('devModel').value,
+            name: document.getElementById('devName').value.trim(),
+            model: document.getElementById('devModel').value.trim(),
             power: parseFloat(document.getElementById('devPower').value) || 0,
             amortization: parseFloat(document.getElementById('devAmortization').value) || 0
         };
 
         if (id) {
-            const index = appData.devices.findIndex(d => String(d.id) === String(id));
+            const index = appData.devices.findIndex(d => String(d.id).trim() === String(id).trim());
             if (index !== -1) {
                 appData.devices[index] = device;
             } else {
@@ -767,7 +819,7 @@
     }
 
     function editDevice(id) {
-        const dev = appData.devices.find(d => String(d.id) === String(id));
+        const dev = appData.devices.find(d => String(d.id).trim() === String(id).trim());
         if (!dev) return;
         document.getElementById('deviceId').value = dev.id;
         document.getElementById('devName').value = dev.name;
@@ -778,7 +830,7 @@
     }
 
     function duplicateDevice(id) {
-        const dev = appData.devices.find(d => String(d.id) === String(id));
+        const dev = appData.devices.find(d => String(d.id).trim() === String(id).trim());
         if (!dev) return;
         const newDev = { ...dev, id: 'dev_' + Date.now().toString(), name: dev.name + ' (Kopie)' };
         appData.devices.push(newDev);
@@ -787,7 +839,7 @@
 
     function deleteDevice(id) {
         if (confirm('Opravdu chcete odstranit toto zařízení?')) {
-            appData.devices = appData.devices.filter(d => String(d.id) !== String(id));
+            appData.devices = appData.devices.filter(d => String(d.id).trim() !== String(id).trim());
             saveData();
         }
     }
@@ -801,6 +853,10 @@
     function renderDeviceTable() {
         const tbody = document.getElementById('deviceTableBody');
         tbody.innerHTML = '';
+        if (appData.devices.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">Žádná zařízení.</td></tr>';
+            return;
+        }
         appData.devices.forEach(d => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -821,6 +877,13 @@
     function renderDeviceSelects() {
         const select = document.getElementById('printDevice');
         select.innerHTML = '';
+        if (appData.devices.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '-- Nejprve přidejte zařízení --';
+            select.appendChild(opt);
+            return;
+        }
         appData.devices.forEach(d => {
             const opt = document.createElement('option');
             opt.value = d.id;
@@ -836,8 +899,8 @@
         const filId = document.getElementById('printFilament').value;
         const devId = document.getElementById('printDevice').value;
 
-        const filament = appData.filaments.find(f => String(f.id) === String(filId));
-        const device = appData.devices.find(d => String(d.id) === String(devId));
+        const filament = appData.filaments.find(f => String(f.id).trim() === String(filId).trim());
+        const device = appData.devices.find(d => String(d.id).trim() === String(devId).trim());
 
         if (!filament || !device) {
             alert('Vyberte platný filament a zařízení.');
@@ -914,6 +977,11 @@
             (h.name && h.name.toLowerCase().includes(query)) || (h.note && h.note.toLowerCase().includes(query))
         );
 
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted)">Žádná historie tisků.</td></tr>';
+            return;
+        }
+
         filtered.slice().reverse().forEach(h => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -934,7 +1002,7 @@
     }
 
     function repeatPrint(id) {
-        const item = appData.history.find(h => String(h.id) === String(id));
+        const item = appData.history.find(h => String(h.id).trim() === String(id).trim());
         if (!item) return;
 
         const navBtns = document.querySelectorAll('aside nav button');
@@ -955,23 +1023,26 @@
 
     function deleteHistoryItem(id) {
         if (confirm('Odstranit tento záznam z historie?')) {
-            appData.history = appData.history.filter(h => String(h.id) !== String(id));
+            appData.history = appData.history.filter(h => String(h.id).trim() !== String(id).trim());
             saveData();
         }
     }
 
     // --- NASTAVENÍ ---
     function renderSettings() {
-        document.getElementById('setEnergyPrice').value = appData.settings.energyPrice;
-        document.getElementById('setHourlyRate').value = appData.settings.hourlyRate;
+        document.getElementById('setEnergyPrice').value = appData.settings.energyPrice || 6.0;
+        document.getElementById('setHourlyRate').value = appData.settings.hourlyRate || 250;
+        document.getElementById('setGoogleClientId').value = appData.settings.googleClientId || '';
     }
 
     function saveSettings(e) {
         e.preventDefault();
         appData.settings.energyPrice = parseFloat(document.getElementById('setEnergyPrice').value);
         appData.settings.hourlyRate = parseFloat(document.getElementById('setHourlyRate').value);
+        appData.settings.googleClientId = document.getElementById('setGoogleClientId').value.trim();
         saveData();
-        alert('Nastavení sazeb bylo uloženo.');
+        initGoogleAuth();
+        alert('Nastavení uloženo.');
     }
 
     // --- PŘEHLED ---
