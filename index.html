@@ -1,530 +1,662 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Tisk Manager</title>
-    
-    <!-- Tailwind CSS pro moderní vzhled -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- FontAwesome pro ikonky -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Základní styl pro přepínání záložek -->
-    <style>
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Tisk Manager</title>
+  <!-- Tailwind CSS & FontAwesome Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col md:flex-row font-sans">
 
-    <!-- Navigace a layout -->
-    <div class="flex h-screen overflow-hidden">
-        
-        <!-- Sidebar -->
-        <aside class="w-64 bg-gray-900 text-white flex flex-col">
-            <div class="p-4 text-2xl font-bold border-b border-gray-700">
-                <i class="fa-solid fa-cube text-blue-400 mr-2"></i>3D Sklad
-            </div>
-            
-            <nav class="flex-1 p-4 space-y-2">
-                <button onclick="switchTab('dashboard')" class="w-full text-left p-3 rounded hover:bg-gray-800 focus:bg-gray-800 transition flex items-center">
-                    <i class="fa-solid fa-chart-pie w-6"></i> <span class="ml-2">Přehled</span>
-                </button>
-                <button onclick="switchTab('filaments')" class="w-full text-left p-3 rounded hover:bg-gray-800 focus:bg-gray-800 transition flex items-center">
-                    <i class="fa-solid fa-boxes-stacked w-6"></i> <span class="ml-2">Sklad filamentů</span>
-                </button>
-                <button onclick="switchTab('printers')" class="w-full text-left p-3 rounded hover:bg-gray-800 focus:bg-gray-800 transition flex items-center">
-                    <i class="fa-solid fa-print w-6"></i> <span class="ml-2">Zařízení / Tiskárny</span>
-                </button>
-                <button onclick="switchTab('new-print')" class="w-full text-left p-3 rounded hover:bg-gray-800 focus:bg-gray-800 transition flex items-center">
-                    <i class="fa-solid fa-calculator w-6"></i> <span class="ml-2">Nový tisk</span>
-                </button>
-                <button onclick="switchTab('history')" class="w-full text-left p-3 rounded hover:bg-gray-800 focus:bg-gray-800 transition flex items-center">
-                    <i class="fa-solid fa-clock-rotate-left w-6"></i> <span class="ml-2">Historie tisků</span>
-                </button>
-                <button onclick="switchTab('settings')" class="w-full text-left p-3 rounded hover:bg-gray-800 focus:bg-gray-800 transition flex items-center">
-                    <i class="fa-solid fa-gear w-6"></i> <span class="ml-2">Nastavení</span>
-                </button>
-            </nav>
+  <!-- Sidebar / Navigace -->
+  <aside class="w-full md:w-64 bg-slate-800 border-r border-slate-700 flex flex-col justify-between p-4 shrink-0">
+    <div>
+      <div class="flex items-center gap-3 mb-8 px-2">
+        <i class="fa-solid fa-cube text-indigo-400 text-2xl"></i>
+        <h1 class="text-xl font-bold tracking-wide">3D Tisk Manager</h1>
+      </div>
 
-            <div class="p-4 border-t border-gray-700">
-                <button id="auth-btn" onclick="handleAuthClick()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded transition flex justify-center items-center">
-                    <i class="fa-brands fa-google mr-2"></i> Přihlásit se
-                </button>
-                <p id="sync-status" class="text-xs text-center text-gray-400 mt-2">Data uložena lokálně</p>
-            </div>
-        </aside>
-
-        <!-- Hlavní obsah -->
-        <main class="flex-1 overflow-y-auto p-8">
-            
-            <!-- Přehled -->
-            <section id="dashboard" class="tab-content active">
-                <h2 class="text-3xl font-bold mb-6">Přehled</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 rounded-lg shadow border-t-4 border-blue-500">
-                        <h3 class="text-gray-500 text-sm uppercase font-semibold">Celkem filamentů</h3>
-                        <p class="text-3xl font-bold mt-2" id="dash-filaments">0</p>
-                    </div>
-                    <div class="bg-white p-6 rounded-lg shadow border-t-4 border-green-500">
-                        <h3 class="text-gray-500 text-sm uppercase font-semibold">Dokončených tisků</h3>
-                        <p class="text-3xl font-bold mt-2" id="dash-prints">0</p>
-                    </div>
-                    <div class="bg-white p-6 rounded-lg shadow border-t-4 border-purple-500">
-                        <h3 class="text-gray-500 text-sm uppercase font-semibold">Zisk celkem (Kč)</h3>
-                        <p class="text-3xl font-bold mt-2" id="dash-profit">0 Kč</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Sklad filamentů -->
-            <section id="filaments" class="tab-content">
-                <h2 class="text-3xl font-bold mb-6">Sklad filamentů</h2>
-                <div class="bg-white p-6 rounded-lg shadow mb-6">
-                    <h3 class="text-xl font-semibold mb-4">Přidat nový filament</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <input type="text" id="fil-name" placeholder="Název / Barva" class="border p-2 rounded">
-                        <input type="text" id="fil-material" placeholder="Materiál (PLA, PETG...)" class="border p-2 rounded">
-                        <input type="number" id="fil-weight" placeholder="Váha (g)" class="border p-2 rounded">
-                        <input type="number" id="fil-price" placeholder="Cena celkem (Kč)" class="border p-2 rounded">
-                    </div>
-                    <button onclick="addFilament()" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Přidat do skladu</button>
-                </div>
-                <div class="bg-white rounded-lg shadow overflow-hidden">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-gray-50 border-b">
-                            <tr>
-                                <th class="p-3">Název</th>
-                                <th class="p-3">Materiál</th>
-                                <th class="p-3">Zbývá (g)</th>
-                                <th class="p-3">Cena (Kč/g)</th>
-                                <th class="p-3">Akce</th>
-                            </tr>
-                        </thead>
-                        <tbody id="filament-list" class="divide-y divide-gray-200"></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Tiskárny -->
-            <section id="printers" class="tab-content">
-                <h2 class="text-3xl font-bold mb-6">Zařízení / Tiskárny</h2>
-                <div class="bg-white p-6 rounded-lg shadow mb-6">
-                    <h3 class="text-xl font-semibold mb-4">Přidat tiskárnu</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <input type="text" id="print-name" placeholder="Název tiskárny" class="border p-2 rounded">
-                        <input type="number" id="print-power" placeholder="Příkon (W)" class="border p-2 rounded">
-                        <input type="number" id="print-wear" placeholder="Amortizace/Servis (Kč/hod)" class="border p-2 rounded">
-                    </div>
-                    <button onclick="addPrinter()" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Přidat tiskárnu</button>
-                </div>
-                <div class="bg-white rounded-lg shadow overflow-hidden">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-gray-50 border-b">
-                            <tr>
-                                <th class="p-3">Název tiskárny</th>
-                                <th class="p-3">Příkon (W)</th>
-                                <th class="p-3">Amortizace (Kč/hod)</th>
-                                <th class="p-3">Akce</th>
-                            </tr>
-                        </thead>
-                        <tbody id="printer-list" class="divide-y divide-gray-200"></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Nový tisk -->
-            <section id="new-print" class="tab-content">
-                <h2 class="text-3xl font-bold mb-6">Kalkulace nového tisku</h2>
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        
-                        <!-- Vstupy -->
-                        <div class="space-y-4 border-r pr-6">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Název tisku</label>
-                                <input type="text" id="calc-name" class="w-full border p-2 rounded" placeholder="Např. Stojánek na mobil">
-                            </div>
-                            
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Výběr filamentu</label>
-                                <select id="calc-filament" class="w-full border p-2 rounded"></select>
-                            </div>
-                            
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Spotřeba materiálu (g)</label>
-                                <input type="number" id="calc-weight" class="w-full border p-2 rounded" placeholder="Gramy" oninput="calculatePrice()">
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Výběr tiskárny</label>
-                                <select id="calc-printer" class="w-full border p-2 rounded" onchange="calculatePrice()"></select>
-                            </div>
-
-                            <div class="flex gap-4">
-                                <div class="flex-1">
-                                    <label class="block text-sm font-medium mb-1">Doba tisku (hodiny)</label>
-                                    <input type="number" id="calc-hours" class="w-full border p-2 rounded" value="0" min="0" oninput="calculatePrice()">
-                                </div>
-                                <div class="flex-1">
-                                    <label class="block text-sm font-medium mb-1">Doba tisku (minuty)</label>
-                                    <input type="number" id="calc-mins" class="w-full border p-2 rounded" value="0" min="0" max="59" oninput="calculatePrice()">
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Lidská práce (minuty)</label>
-                                <p class="text-xs text-gray-500 mb-1">Příprava, sundání, post-processing</p>
-                                <input type="number" id="calc-labor-mins" class="w-full border p-2 rounded" value="0" min="0" oninput="calculatePrice()">
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Přirážka/Zisk (%)</label>
-                                <input type="number" id="calc-margin" class="w-full border p-2 rounded" value="0" min="0" oninput="calculatePrice()">
-                            </div>
-                        </div>
-
-                        <!-- Výsledky -->
-                        <div class="space-y-4 bg-gray-50 p-6 rounded">
-                            <h3 class="text-xl font-bold border-b pb-2">Rozpad nákladů</h3>
-                            
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Náklad na materiál:</span>
-                                <span class="font-semibold" id="res-material">0.00 Kč</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Náklad na energii:</span>
-                                <span class="font-semibold" id="res-energy">0.00 Kč</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Amortizace tiskárny:</span>
-                                <span class="font-semibold" id="res-wear">0.00 Kč</span>
-                            </div>
-                            <div class="flex justify-between border-b pb-2">
-                                <span class="text-gray-600">Cena za práci:</span>
-                                <span class="font-semibold" id="res-labor">0.00 Kč</span>
-                            </div>
-                            
-                            <div class="flex justify-between text-lg mt-2">
-                                <span>Celkové náklady:</span>
-                                <span class="font-bold text-gray-800" id="res-cost">0.00 Kč</span>
-                            </div>
-                            <div class="flex justify-between text-xl font-bold text-blue-600 mt-4 border-t pt-4">
-                                <span>Doporučená cena:</span>
-                                <span id="res-total">0.00 Kč</span>
-                            </div>
-
-                            <button onclick="savePrint()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded mt-4 transition">
-                                <i class="fa-solid fa-check mr-2"></i> Uložit tisk a odečíst materiál
-                            </button>
-                        </div>
-
-                    </div>
-                </div>
-            </section>
-
-            <!-- Historie -->
-            <section id="history" class="tab-content">
-                <h2 class="text-3xl font-bold mb-6">Historie tisků</h2>
-                <div class="bg-white rounded-lg shadow overflow-hidden">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-gray-50 border-b">
-                            <tr>
-                                <th class="p-3">Datum</th>
-                                <th class="p-3">Název</th>
-                                <th class="p-3">Materiál (g)</th>
-                                <th class="p-3">Tiskárna</th>
-                                <th class="p-3">Náklady</th>
-                                <th class="p-3">Cena</th>
-                            </tr>
-                        </thead>
-                        <tbody id="history-list" class="divide-y divide-gray-200"></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Nastavení -->
-            <section id="settings" class="tab-content">
-                <h2 class="text-3xl font-bold mb-6">Nastavení</h2>
-                <div class="bg-white p-6 rounded-lg shadow max-w-lg">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Cena elektřiny (Kč za kWh)</label>
-                            <input type="number" id="set-electricity" class="w-full border p-2 rounded" value="5">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Hodinová sazba za práci (Kč / hod)</label>
-                            <p class="text-xs text-gray-500 mb-1">Použije se pro výpočet času stráveného přípravou</p>
-                            <input type="number" id="set-labor" class="w-full border p-2 rounded" value="300">
-                        </div>
-                        <button onclick="saveSettings()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition">Uložit nastavení</button>
-                    </div>
-                </div>
-            </section>
-
-        </main>
+      <nav class="space-y-1">
+        <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-btn active w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:bg-slate-700">
+          <i class="fa-solid fa-chart-pie w-5 text-indigo-400"></i> Přehled
+        </button>
+        <button onclick="switchTab('filaments')" id="btn-filaments" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:bg-slate-700">
+          <i class="fa-solid fa-boxes-stacked w-5 text-indigo-400"></i> Sklad filamentů
+        </button>
+        <button onclick="switchTab('printers')" id="btn-printers" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:bg-slate-700">
+          <i class="fa-solid fa-print w-5 text-indigo-400"></i> Zařízení / Tiskárny
+        </button>
+        <button onclick="switchTab('new-print')" id="btn-new-print" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:bg-slate-700">
+          <i class="fa-solid fa-calculator w-5 text-indigo-400"></i> Nový tisk
+        </button>
+        <button onclick="switchTab('history')" id="btn-history" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:bg-slate-700">
+          <i class="fa-solid fa-clock-rotate-left w-5 text-indigo-400"></i> Historie tisků
+        </button>
+        <button onclick="switchTab('settings')" id="btn-settings" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:bg-slate-700">
+          <i class="fa-solid fa-gear w-5 text-indigo-400"></i> Nastavení
+        </button>
+      </nav>
     </div>
 
-    <!-- Skripty s logikou aplikace -->
-    <script>
-        const CLIENT_ID = '809838810281-7a80lk1p3b4uimv7pet1q9v3p5fsbdjm.apps.googleusercontent.com';
-        
-        let appData = {
-            filaments: [],
-            printers: [],
-            prints: [],
-            settings: {
-                electricityPrice: 5,
-                laborRate: 300
+    <!-- Google Drive Auth Status -->
+    <div class="mt-8 pt-4 border-t border-slate-700 text-sm">
+      <div id="auth-status" class="mb-3 text-slate-400 flex items-center gap-2">
+        <i class="fa-solid fa-cloud text-slate-500"></i> <span id="status-text">Odpojeno od Google Disku</span>
+      </div>
+      <button id="auth-btn" onclick="handleAuthClick()" class="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition flex items-center justify-center gap-2">
+        <i class="fa-brands fa-google"></i> Přihlásit k Google Disku
+      </button>
+      <div id="sync-status" class="mt-2 text-xs text-slate-500 text-center"></div>
+    </div>
+  </aside>
+
+  <!-- Hlavní obsah -->
+  <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 right-4 bg-emerald-600 text-white px-4 py-3 rounded-lg shadow-lg hidden transition-all z-50 flex items-center gap-2">
+      <i class="fa-solid fa-circle-check"></i> <span id="toast-text">Uloženo</span>
+    </div>
+
+    <!-- 1. Přehled -->
+    <section id="tab-dashboard" class="tab-content space-y-6">
+      <h2 class="text-2xl font-bold">Přehled</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+          <p class="text-slate-400 text-sm font-medium">Celkem filamentů</p>
+          <p id="dash-filaments-count" class="text-3xl font-bold mt-1 text-indigo-400">0</p>
+        </div>
+        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+          <p class="text-slate-400 text-sm font-medium">Dokončených tisků</p>
+          <p id="dash-prints-count" class="text-3xl font-bold mt-1 text-emerald-400">0</p>
+        </div>
+        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+          <p class="text-slate-400 text-sm font-medium">Zisk celkem</p>
+          <p id="dash-total-profit" class="text-3xl font-bold mt-1 text-purple-400">0,00 Kč</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Sklad filamentů -->
+    <section id="tab-filaments" class="tab-content hidden space-y-6">
+      <h2 class="text-2xl font-bold">Sklad filamentů</h2>
+      <form onsubmit="addFilament(event)" class="bg-slate-800 p-5 rounded-xl border border-slate-700 grid grid-cols-1 md:grid-cols-5 gap-3">
+        <input type="text" id="fil-name" placeholder="Název / Barva" required class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <input type="text" id="fil-material" placeholder="Materiál (PLA, PETG...)" required class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <input type="number" id="fil-weight" placeholder="Váha špule (g)" required class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <input type="number" step="0.01" id="fil-price" placeholder="Cena celkem (Kč)" required class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded-lg transition">Přidat filament</button>
+      </form>
+
+      <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-700/50 text-slate-400 uppercase text-xs">
+            <tr>
+              <th class="p-3">Název</th>
+              <th class="p-3">Materiál</th>
+              <th class="p-3">Zbývá (g)</th>
+              <th class="p-3">Cena (Kč/g)</th>
+              <th class="p-3 text-right">Akce</th>
+            </tr>
+          </thead>
+          <tbody id="filaments-table" class="divide-y divide-slate-700"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 3. Zařízení / Tiskárny -->
+    <section id="tab-printers" class="tab-content hidden space-y-6">
+      <h2 class="text-2xl font-bold">Zařízení / Tiskárny</h2>
+      <form onsubmit="addPrinter(event)" class="bg-slate-800 p-5 rounded-xl border border-slate-700 grid grid-cols-1 md:grid-cols-4 gap-3">
+        <input type="text" id="print-name" placeholder="Název tiskárny" required class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <input type="number" id="print-power" placeholder="Příkon (W)" required class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <input type="number" step="0.01" id="print-wear" placeholder="Amortizace / Servis (Kč/hod)" value="0" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded-lg transition">Přidat tiskárnu</button>
+      </form>
+
+      <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-700/50 text-slate-400 uppercase text-xs">
+            <tr>
+              <th class="p-3">Název tiskárny</th>
+              <th class="p-3">Příkon (W)</th>
+              <th class="p-3">Amortizace (Kč/hod)</th>
+              <th class="p-3 text-right">Akce</th>
+            </tr>
+          </thead>
+          <tbody id="printers-table" class="divide-y divide-slate-700"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 4. Nový tisk (Kalkulačka) -->
+    <section id="tab-new-print" class="tab-content hidden space-y-6">
+      <h2 class="text-2xl font-bold">Kalkulace nového tisku</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <form oninput="calculatePrintCost()" onsubmit="savePrintLog(event)" class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Název tisku / zakázky</label>
+            <input type="text" id="calc-name" required placeholder="Např. Stojánek na telefon" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Výběr filamentu</label>
+              <select id="calc-filament" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"></select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Spotřeba materiálu (g)</label>
+              <input type="number" id="calc-weight" required min="1" placeholder="Gramy" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3">
+            <div class="col-span-1">
+              <label class="block text-xs font-medium text-slate-400 mb-1">Výběr tiskárny</label>
+              <select id="calc-printer" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"></select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Čas tisku (hod)</label>
+              <input type="number" id="calc-hours" value="0" min="0" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Čas tisku (min)</label>
+              <input type="number" id="calc-mins" value="0" min="0" max="59" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Čas lidské práce (minuty)</label>
+            <input type="number" id="calc-work-mins" value="0" min="0" placeholder="Příprava, post-processing" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Marže (%)</label>
+            <input type="number" id="calc-margin" value="30" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+          </div>
+
+          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-lg transition mt-4">
+            Uložit tisk a odečíst ze skladu
+          </button>
+        </form>
+
+        <!-- Rozpad ceny -->
+        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 flex flex-col justify-between">
+          <div>
+            <h3 class="text-lg font-bold border-b border-slate-700 pb-3 mb-4">Kalkulace ceny</h3>
+            <div class="space-y-3 text-sm">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Materiál:</span>
+                <span id="cost-material" class="font-medium">0,00 Kč</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Energie (Elektřina):</span>
+                <span id="cost-energy" class="font-medium">0,00 Kč</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Opotřebení tiskárny:</span>
+                <span id="cost-wear" class="font-medium">0,00 Kč</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Lidská práce:</span>
+                <span id="cost-labor" class="font-medium">0,00 Kč</span>
+              </div>
+              <div class="flex justify-between pt-3 border-t border-slate-700 text-base font-bold">
+                <span>Náklady celkem:</span>
+                <span id="cost-total-cost" class="text-amber-400">0,00 Kč</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700/80 mt-6 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-300 font-medium">Doporučená prodejní cena:</span>
+              <span id="cost-final-price" class="text-2xl font-bold text-emerald-400">0,00 Kč</span>
+            </div>
+            <div class="flex justify-between text-xs text-slate-400">
+              <span>Váš zisk z tisku:</span>
+              <span id="cost-profit" class="font-medium text-purple-400">0,00 Kč</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Historie tisků -->
+    <section id="tab-history" class="tab-content hidden space-y-6">
+      <h2 class="text-2xl font-bold">Historie tisků</h2>
+      <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-700/50 text-slate-400 uppercase text-xs">
+            <tr>
+              <th class="p-3">Datum</th>
+              <th class="p-3">Název tisku</th>
+              <th class="p-3">Tiskárna</th>
+              <th class="p-3">Náklady</th>
+              <th class="p-3">Prodejní cena</th>
+              <th class="p-3">Zisk</th>
+              <th class="p-3 text-right">Akce</th>
+            </tr>
+          </thead>
+          <tbody id="history-table" class="divide-y divide-slate-700"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 6. Nastavení -->
+    <section id="tab-settings" class="tab-content hidden space-y-6">
+      <h2 class="text-2xl font-bold">Nastavení</h2>
+      <form onsubmit="saveSettings(event)" class="bg-slate-800 p-5 rounded-xl border border-slate-700 max-w-lg space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Cena elektřiny (Kč / kWh)</label>
+          <input type="number" step="0.01" id="set-electricity" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Hodinová sazba lidské práce (Kč / hod)</label>
+          <input type="number" step="1" id="set-labor" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Výchozí marže (%)</label>
+          <input type="number" id="set-margin" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        </div>
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 px-4 rounded-lg transition">
+          Uložit nastavení
+        </button>
+      </form>
+    </section>
+
+  </main>
+
+  <!-- Aplikační Skript -->
+  <script>
+    const CLIENT_ID = '809838810281-7a80lk1p3b4uimv7pet1q9v3p5fsbdjm.apps.googleusercontent.com';
+    const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+    let tokenClient;
+    let accessToken = null;
+    let driveFileId = null;
+
+    let appData = {
+      filaments: [],
+      printers: [],
+      logs: [],
+      settings: {
+        electricityPrice: 6.0,
+        laborRate: 250,
+        margin: 30
+      }
+    };
+
+    // Inicializace aplikace
+    window.addEventListener('DOMContentLoaded', () => {
+      loadLocal();
+      renderAll();
+      initGis();
+    });
+
+    // Google Identity Services (GIS) init
+    function initGis() {
+      if (typeof google !== 'undefined' && google.accounts) {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: async (response) => {
+            if (response.error !== undefined) {
+              showToast('Chyba přihlášení Google', 'error');
+              return;
             }
-        };
+            accessToken = response.access_token;
+            updateAuthUI(true);
+            await syncFromDrive();
+          },
+        });
+      } else {
+        setTimeout(initGis, 500);
+      }
+    }
 
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            updateUI();
+    function handleAuthClick() {
+      if (!accessToken) {
+        tokenClient.requestAccessToken({prompt: 'consent'});
+      } else {
+        accessToken = null;
+        driveFileId = null;
+        updateAuthUI(false);
+      }
+    }
+
+    function updateAuthUI(isLoggedIn) {
+      const btn = document.getElementById('auth-btn');
+      const statusText = document.getElementById('status-text');
+      if (isLoggedIn) {
+        btn.textContent = 'Odpojit Google Disk';
+        btn.className = 'w-full py-2 px-3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-lg transition flex items-center justify-center gap-2';
+        statusText.textContent = 'Přihlášeno k Disku';
+      } else {
+        btn.innerHTML = '<i class="fa-brands fa-google"></i> Přihlásit k Google Disku';
+        btn.className = 'w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition flex items-center justify-center gap-2';
+        statusText.textContent = 'Odpojeno od Google Disku';
+        document.getElementById('sync-status').textContent = '';
+      }
+    }
+
+    // Google Drive Sync
+    async function syncFromDrive() {
+      document.getElementById('sync-status').textContent = 'Načítám z Disku...';
+      try {
+        let query = encodeURIComponent("name = '3d_tisk_manager_data.json' and trashed = false");
+        let res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        let data = await res.json();
+
+        if (data.files && data.files.length > 0) {
+          driveFileId = data.files[0].id;
+          let fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+          });
+          let content = await fileRes.json();
+          if (content) {
+            appData = Object.assign(appData, content);
+            saveLocal();
+            renderAll();
+            showToast('Načteno z Google Disku');
+            document.getElementById('sync-status').textContent = 'Uloženo na Disku';
+          }
+        } else {
+          await saveToDrive();
+          showToast('Soubor vytvořen na Google Disku');
         }
+      } catch (err) {
+        console.error(err);
+        showToast('Chyba při komunikaci s Diskem', 'error');
+        document.getElementById('sync-status').textContent = 'Chyba synchronizace';
+      }
+    }
 
-        function updateUI() {
-            document.getElementById('dash-filaments').innerText = appData.filaments.length;
-            document.getElementById('dash-prints').innerText = appData.prints.length;
-            const totalProfit = appData.prints.reduce((acc, print) => acc + (print.finalPrice - print.totalCost), 0);
-            document.getElementById('dash-profit').innerText = totalProfit.toFixed(2) + ' Kč';
+    async function saveToDrive() {
+      saveLocal();
+      if (!accessToken) return;
+      document.getElementById('sync-status').textContent = 'Ukládám na Disk...';
+      try {
+        const fileContent = JSON.stringify(appData, null, 2);
+        if (!driveFileId) {
+          const metadata = { name: '3d_tisk_manager_data.json', mimeType: 'application/json' };
+          const form = new FormData();
+          form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+          form.append('file', new Blob([fileContent], { type: 'application/json' }));
 
-            document.getElementById('set-electricity').value = appData.settings.electricityPrice;
-            document.getElementById('set-labor').value = appData.settings.laborRate;
-
-            const filList = document.getElementById('filament-list');
-            filList.innerHTML = '';
-            const calcSelect = document.getElementById('calc-filament');
-            calcSelect.innerHTML = '<option value="">-- Vyberte filament --</option>';
-            
-            appData.filaments.forEach((fil, index) => {
-                const costPerGram = (fil.price / fil.initialWeight).toFixed(2);
-                filList.innerHTML += `
-                    <tr class="hover:bg-gray-50">
-                        <td class="p-3">${fil.name}</td>
-                        <td class="p-3">${fil.material}</td>
-                        <td class="p-3 font-bold ${fil.currentWeight < 100 ? 'text-red-500' : ''}">${fil.currentWeight} g</td>
-                        <td class="p-3">${costPerGram} Kč/g</td>
-                        <td class="p-3">
-                            <button onclick="deleteFilament(${index})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `;
-                calcSelect.innerHTML += `<option value="${index}">${fil.name} (${fil.material}) - ${fil.currentWeight}g zbývá</option>`;
-            });
-
-            const printList = document.getElementById('printer-list');
-            printList.innerHTML = '';
-            const calcPrinter = document.getElementById('calc-printer');
-            calcPrinter.innerHTML = '<option value="">-- Vyberte tiskárnu --</option>';
-
-            appData.printers.forEach((printer, index) => {
-                printList.innerHTML += `
-                    <tr class="hover:bg-gray-50">
-                        <td class="p-3">${printer.name}</td>
-                        <td class="p-3">${printer.power} W</td>
-                        <td class="p-3">${printer.wear} Kč/hod</td>
-                        <td class="p-3">
-                            <button onclick="deletePrinter(${index})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `;
-                calcPrinter.innerHTML += `<option value="${index}">${printer.name} (${printer.power}W)</option>`;
-            });
-
-            const historyList = document.getElementById('history-list');
-            historyList.innerHTML = '';
-            [...appData.prints].reverse().forEach(print => {
-                historyList.innerHTML += `
-                    <tr class="hover:bg-gray-50">
-                        <td class="p-3 text-sm text-gray-500">${print.date}</td>
-                        <td class="p-3 font-medium">${print.name}</td>
-                        <td class="p-3">${print.weight} g</td>
-                        <td class="p-3">${print.printerName || '-'}</td>
-                        <td class="p-3">${print.totalCost.toFixed(2)} Kč</td>
-                        <td class="p-3 font-bold text-blue-600">${print.finalPrice.toFixed(2)} Kč</td>
-                    </tr>
-                `;
-            });
-            
-            saveToLocal();
+          let res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${accessToken}` },
+            body: form
+          });
+          let resData = await res.json();
+          driveFileId = resData.id;
+        } else {
+          await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: fileContent
+          });
         }
+        document.getElementById('sync-status').textContent = 'Data uložena na Google Disk';
+      } catch (err) {
+        console.error(err);
+        document.getElementById('sync-status').textContent = 'Chyba ukládání na Disk';
+      }
+    }
 
-        function addFilament() {
-            const name = document.getElementById('fil-name').value;
-            const material = document.getElementById('fil-material').value;
-            const weight = parseFloat(document.getElementById('fil-weight').value);
-            const price = parseFloat(document.getElementById('fil-price').value);
+    // Lokální paměť
+    function saveLocal() {
+      localStorage.setItem('3d_tisk_data', JSON.stringify(appData));
+    }
 
-            if(name && material && weight > 0 && price > 0) {
-                appData.filaments.push({ name, material, initialWeight: weight, currentWeight: weight, price });
-                document.getElementById('fil-name').value = '';
-                document.getElementById('fil-material').value = '';
-                document.getElementById('fil-weight').value = '';
-                document.getElementById('fil-price').value = '';
-                updateUI();
-            } else {
-                alert('Vyplňte správně všechny údaje o filamentu.');
-            }
-        }
+    function loadLocal() {
+      const data = localStorage.getItem('3d_tisk_data');
+      if (data) {
+        try { appData = Object.assign(appData, JSON.parse(data)); } catch(e){}
+      }
+    }
 
-        function deleteFilament(index) {
-            if(confirm('Opravdu smazat tento filament?')) {
-                appData.filaments.splice(index, 1);
-                updateUI();
-            }
-        }
+    // Navigace
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('bg-slate-700', 'font-bold'));
+      
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      document.getElementById(`btn-${tabId}`).classList.add('bg-slate-700', 'font-bold');
+    }
 
-        function addPrinter() {
-            const name = document.getElementById('print-name').value;
-            const power = parseFloat(document.getElementById('print-power').value);
-            const wear = parseFloat(document.getElementById('print-wear').value) || 0;
+    // Renderování dat
+    function renderAll() {
+      renderDashboard();
+      renderFilaments();
+      renderPrinters();
+      renderCalculatorsOptions();
+      renderHistory();
+      renderSettings();
+    }
 
-            if(name && power > 0) {
-                appData.printers.push({ name, power, wear });
-                document.getElementById('print-name').value = '';
-                document.getElementById('print-power').value = '';
-                document.getElementById('print-wear').value = '';
-                updateUI();
-            } else {
-                alert('Zadejte název a platný příkon tiskárny.');
-            }
-        }
+    function renderDashboard() {
+      document.getElementById('dash-filaments-count').textContent = appData.filaments.length;
+      document.getElementById('dash-prints-count').textContent = appData.logs.length;
+      const profit = appData.logs.reduce((sum, item) => sum + (item.profit || 0), 0);
+      document.getElementById('dash-total-profit').textContent = profit.toFixed(2) + ' Kč';
+    }
 
-        function deletePrinter(index) {
-            if(confirm('Opravdu smazat tuto tiskárnu?')) {
-                appData.printers.splice(index, 1);
-                updateUI();
-            }
-        }
+    function addFilament(e) {
+      e.preventDefault();
+      const name = document.getElementById('fil-name').value;
+      const material = document.getElementById('fil-material').value;
+      const weight = parseFloat(document.getElementById('fil-weight').value);
+      const price = parseFloat(document.getElementById('fil-price').value);
 
-        function saveSettings() {
-            appData.settings.electricityPrice = parseFloat(document.getElementById('set-electricity').value) || 0;
-            appData.settings.laborRate = parseFloat(document.getElementById('set-labor').value) || 0;
-            alert('Nastavení uloženo.');
-            updateUI();
-            calculatePrice();
-        }
+      appData.filaments.push({
+        id: Date.now(),
+        name, material, weight, price,
+        remainingWeight: weight,
+        pricePerGram: price / weight
+      });
 
-        let currentCalc = { materialCost: 0, energyCost: 0, wearCost: 0, laborCost: 0, totalCost: 0, finalPrice: 0 };
+      e.target.reset();
+      renderAll();
+      saveToDrive();
+      showToast('Filament přidán');
+    }
 
-        function calculatePrice() {
-            const filIndex = document.getElementById('calc-filament').value;
-            const printerIndex = document.getElementById('calc-printer').value;
-            const weightUsed = parseFloat(document.getElementById('calc-weight').value) || 0;
-            const hours = parseFloat(document.getElementById('calc-hours').value) || 0;
-            const mins = parseFloat(document.getElementById('calc-mins').value) || 0;
-            const laborMins = parseFloat(document.getElementById('calc-labor-mins').value) || 0;
-            const margin = parseFloat(document.getElementById('calc-margin').value) || 0;
+    function deleteFilament(id) {
+      appData.filaments = appData.filaments.filter(f => f.id !== id);
+      renderAll();
+      saveToDrive();
+      showToast('Filament smazán');
+    }
 
-            let matCost = 0;
-            let enCost = 0;
-            let wearCost = 0;
-            let labCost = 0;
+    function renderFilaments() {
+      const tbody = document.getElementById('filaments-table');
+      tbody.innerHTML = appData.filaments.map(f => `
+        <tr class="hover:bg-slate-700/30">
+          <td class="p-3 font-medium">${f.name}</td>
+          <td class="p-3 text-slate-400">${f.material}</td>
+          <td class="p-3 font-semibold ${f.remainingWeight < 100 ? 'text-amber-400' : 'text-emerald-400'}">${f.remainingWeight} g / ${f.weight} g</td>
+          <td class="p-3">${f.pricePerGram.toFixed(2)} Kč/g</td>
+          <td class="p-3 text-right">
+            <button onclick="deleteFilament(${f.id})" class="text-rose-400 hover:text-rose-300 p-1"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>
+      `).join('');
+    }
 
-            if(filIndex !== "") {
-                const fil = appData.filaments[filIndex];
-                matCost = (fil.price / fil.initialWeight) * weightUsed;
-            }
+    function addPrinter(e) {
+      e.preventDefault();
+      const name = document.getElementById('print-name').value;
+      const power = parseFloat(document.getElementById('print-power').value);
+      const wear = parseFloat(document.getElementById('print-wear').value) || 0;
 
-            const totalPrintHours = hours + (mins / 60);
+      appData.printers.push({ id: Date.now(), name, power, wear });
 
-            if(printerIndex !== "") {
-                const printer = appData.printers[printerIndex];
-                enCost = (printer.power / 1000) * totalPrintHours * appData.settings.electricityPrice;
-                wearCost = printer.wear * totalPrintHours;
-            }
+      e.target.reset();
+      renderAll();
+      saveToDrive();
+      showToast('Tiskárna přidána');
+    }
 
-            labCost = (laborMins / 60) * appData.settings.laborRate;
+    function deletePrinter(id) {
+      appData.printers = appData.printers.filter(p => p.id !== id);
+      renderAll();
+      saveToDrive();
+      showToast('Tiskárna smazána');
+    }
 
-            const total = matCost + enCost + wearCost + labCost;
-            const final = total * (1 + (margin / 100));
+    function renderPrinters() {
+      const tbody = document.getElementById('printers-table');
+      tbody.innerHTML = appData.printers.map(p => `
+        <tr class="hover:bg-slate-700/30">
+          <td class="p-3 font-medium">${p.name}</td>
+          <td class="p-3 text-indigo-400 font-medium">${p.power} W</td>
+          <td class="p-3">${p.wear.toFixed(2)} Kč/hod</td>
+          <td class="p-3 text-right">
+            <button onclick="deletePrinter(${p.id})" class="text-rose-400 hover:text-rose-300 p-1"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>
+      `).join('');
+    }
 
-            currentCalc = {
-                materialCost: matCost,
-                energyCost: enCost,
-                wearCost: wearCost,
-                laborCost: labCost,
-                totalCost: total,
-                finalPrice: final
-            };
+    function renderCalculatorsOptions() {
+      const filSelect = document.getElementById('calc-filament');
+      filSelect.innerHTML = '<option value="">-- Vyberte filament --</option>' +
+        appData.filaments.map(f => `<option value="${f.id}">${f.name} (${f.material}) - zbývá ${f.remainingWeight}g</option>`).join('');
 
-            document.getElementById('res-material').innerText = matCost.toFixed(2) + ' Kč';
-            document.getElementById('res-energy').innerText = enCost.toFixed(2) + ' Kč';
-            document.getElementById('res-wear').innerText = wearCost.toFixed(2) + ' Kč';
-            document.getElementById('res-labor').innerText = labCost.toFixed(2) + ' Kč';
-            document.getElementById('res-cost').innerText = total.toFixed(2) + ' Kč';
-            document.getElementById('res-total').innerText = final.toFixed(2) + ' Kč';
-        }
+      const printSelect = document.getElementById('calc-printer');
+      printSelect.innerHTML = '<option value="">-- Vyberte tiskárnu --</option>' +
+        appData.printers.map(p => `<option value="${p.id}">${p.name} (${p.power}W)</option>`).join('');
 
-        function savePrint() {
-            const name = document.getElementById('calc-name').value;
-            const filIndex = document.getElementById('calc-filament').value;
-            const printerIndex = document.getElementById('calc-printer').value;
-            const weightUsed = parseFloat(document.getElementById('calc-weight').value) || 0;
+      document.getElementById('calc-margin').value = appData.settings.margin || 30;
+    }
 
-            if(!name || filIndex === "" || weightUsed <= 0) {
-                alert('Vyplňte název, vyberte filament a zadejte spotřebu.');
-                return;
-            }
+    function calculatePrintCost() {
+      const filId = parseInt(document.getElementById('calc-filament').value);
+      const printId = parseInt(document.getElementById('calc-printer').value);
+      const weight = parseFloat(document.getElementById('calc-weight').value) || 0;
+      const hours = parseFloat(document.getElementById('calc-hours').value) || 0;
+      const mins = parseFloat(document.getElementById('calc-mins').value) || 0;
+      const workMins = parseFloat(document.getElementById('calc-work-mins').value) || 0;
+      const margin = parseFloat(document.getElementById('calc-margin').value) || 0;
 
-            const fil = appData.filaments[filIndex];
-            const printerName = printerIndex !== "" ? appData.printers[printerIndex].name : "";
+      const filament = appData.filaments.find(f => f.id === filId);
+      const printer = appData.printers.find(p => p.id === printId);
 
-            if(fil.currentWeight < weightUsed) {
-                if(!confirm('Pozor: Tento tisk spotřebuje více materiálu, než je skladem. Chcete pokračovat?')) {
-                    return;
-                }
-            }
+      const totalHours = hours + (mins / 60);
 
-            fil.currentWeight -= weightUsed;
+      // 1. Náklady na materiál
+      const matCost = filament ? (weight * filament.pricePerGram) : 0;
 
-            appData.prints.push({
-                date: new Date().toLocaleDateString('cs-CZ'),
-                name: name,
-                filamentName: fil.name,
-                printerName: printerName,
-                weight: weightUsed,
-                ...currentCalc
-            });
+      // 2. Náklady na energii
+      const energyCost = printer ? ((printer.power / 1000) * totalHours * (appData.settings.electricityPrice || 6.0)) : 0;
 
-            document.getElementById('calc-name').value = '';
-            document.getElementById('calc-weight').value = '';
-            document.getElementById('calc-hours').value = '0';
-            document.getElementById('calc-mins').value = '0';
-            document.getElementById('calc-labor-mins').value = '0';
-            document.getElementById('calc-margin').value = '0';
-            
-            updateUI();
-            alert('Tisk byl uložen do historie a materiál byl odečten ze skladu.');
-        }
+      // 3. Opotřebení
+      const wearCost = printer ? (totalHours * printer.wear) : 0;
 
-        function saveToLocal() {
-            localStorage.setItem('3dAppData', JSON.stringify(appData));
-        }
+      // 4. Práce
+      const laborCost = (workMins / 60) * (appData.settings.laborRate || 250);
 
-        function loadFromLocal() {
-            const saved = localStorage.getItem('3dAppData');
-            if(saved) {
-                appData = JSON.parse(saved);
-                updateUI();
-            }
-        }
+      const totalCost = matCost + energyCost + wearCost + laborCost;
+      const finalPrice = totalCost * (1 + (margin / 100));
+      const profit = finalPrice - totalCost;
 
-        function handleAuthClick() {
-            alert("Přihlášení na Google Disk zatím běží v demo režimu. Vaše data se teď bezpečně ukládají do paměti tohoto prohlížeče (LocalStorage).");
-            document.getElementById('auth-btn').innerHTML = '<i class="fa-solid fa-check mr-2"></i> Přihlášeno lokálně';
-            document.getElementById('auth-btn').classList.replace('bg-blue-600', 'bg-green-600');
-        }
+      document.getElementById('cost-material').textContent = matCost.toFixed(2) + ' Kč';
+      document.getElementById('cost-energy').textContent = energyCost.toFixed(2) + ' Kč';
+      document.getElementById('cost-wear').textContent = wearCost.toFixed(2) + ' Kč';
+      document.getElementById('cost-labor').textContent = laborCost.toFixed(2) + ' Kč';
+      document.getElementById('cost-total-cost').textContent = totalCost.toFixed(2) + ' Kč';
+      document.getElementById('cost-final-price').textContent = finalPrice.toFixed(2) + ' Kč';
+      document.getElementById('cost-profit').textContent = profit.toFixed(2) + ' Kč';
 
-        window.onload = () => {
-            loadFromLocal();
-            updateUI();
-        };
-    </script>
+      return { totalCost, finalPrice, profit, filId, weight, printerName: printer ? printer.name : 'Nespecifikováno' };
+    }
+
+    function savePrintLog(e) {
+      e.preventDefault();
+      const calc = calculatePrintCost();
+      const name = document.getElementById('calc-name').value;
+
+      const filament = appData.filaments.find(f => f.id === calc.filId);
+      if (filament) {
+        filament.remainingWeight = Math.max(0, filament.remainingWeight - calc.weight);
+      }
+
+      appData.logs.unshift({
+        id: Date.now(),
+        date: new Date().toLocaleDateString('cs-CZ'),
+        name,
+        printer: calc.printerName,
+        totalCost: calc.totalCost,
+        finalPrice: calc.finalPrice,
+        profit: calc.profit
+      });
+
+      e.target.reset();
+      renderAll();
+      saveToDrive();
+      showToast('Tisk uložen do historie');
+      switchTab('history');
+    }
+
+    function deleteLog(id) {
+      appData.logs = appData.logs.filter(l => l.id !== id);
+      renderAll();
+      saveToDrive();
+      showToast('Záznam smazán');
+    }
+
+    function renderHistory() {
+      const tbody = document.getElementById('history-table');
+      tbody.innerHTML = appData.logs.map(l => `
+        <tr class="hover:bg-slate-700/30">
+          <td class="p-3 text-slate-400 text-xs">${l.date}</td>
+          <td class="p-3 font-medium">${l.name}</td>
+          <td class="p-3 text-slate-300">${l.printer}</td>
+          <td class="p-3 text-amber-400">${l.totalCost.toFixed(2)} Kč</td>
+          <td class="p-3 text-emerald-400 font-bold">${l.finalPrice.toFixed(2)} Kč</td>
+          <td class="p-3 text-purple-400 font-semibold">${l.profit.toFixed(2)} Kč</td>
+          <td class="p-3 text-right">
+            <button onclick="deleteLog(${l.id})" class="text-rose-400 hover:text-rose-300 p-1"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderSettings() {
+      document.getElementById('set-electricity').value = appData.settings.electricityPrice;
+      document.getElementById('set-labor').value = appData.settings.laborRate;
+      document.getElementById('set-margin').value = appData.settings.margin;
+    }
+
+    function saveSettings(e) {
+      e.preventDefault();
+      appData.settings.electricityPrice = parseFloat(document.getElementById('set-electricity').value) || 6.0;
+      appData.settings.laborRate = parseFloat(document.getElementById('set-labor').value) || 250;
+      appData.settings.margin = parseFloat(document.getElementById('set-margin').value) || 30;
+
+      saveToDrive();
+      showToast('Nastavení uloženo');
+    }
+
+    function showToast(text, type = 'success') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-text').textContent = text;
+      toast.className = `fixed top-4 right-4 ${type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'} text-white px-4 py-3 rounded-lg shadow-lg transition-all z-50 flex items-center gap-2 block`;
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3000);
+    }
+  </script>
 </body>
 </html>
