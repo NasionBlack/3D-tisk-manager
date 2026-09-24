@@ -18,22 +18,95 @@
             --border: #333333;
             --danger: #ff5252;
             --success: #4caf50;
+            --sidebar-width: 240px;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: var(--bg-primary); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
+        body { background-color: var(--bg-primary); color: var(--text); display: flex; min-height: 100vh; }
 
-        header { background-color: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
-        h1 { font-size: 1.5rem; color: var(--accent); }
+        /* BOČNÍ PANEL (SIDEBAR) */
+        aside {
+            width: var(--sidebar-width);
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+        }
 
-        .auth-box { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
-        .auth-box label { display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text-muted); }
+        aside .logo-area {
+            padding: 1.5rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
 
-        nav { background-color: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; overflow-x: auto; }
-        nav button { background: none; border: none; color: var(--text-muted); padding: 1rem 1.5rem; font-size: 1rem; cursor: pointer; transition: 0.2s; white-space: nowrap; }
-        nav button:hover, nav button.active { color: var(--accent); border-bottom: 3px solid var(--accent); }
+        aside h1 {
+            font-size: 1.3rem;
+            color: var(--accent);
+        }
 
-        main { flex: 1; padding: 2rem; max-width: 1200px; margin: 0 auto; width: 100%; }
+        aside nav {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            padding-top: 0.5rem;
+        }
+
+        aside nav button {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.9rem 1.2rem;
+            font-size: 0.95rem;
+            cursor: pointer;
+            text-align: left;
+            transition: 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        aside nav button:hover, aside nav button.active {
+            color: var(--accent);
+            background-color: rgba(0, 173, 181, 0.08);
+            border-left-color: var(--accent);
+        }
+
+        aside .auth-area {
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+            background-color: #181818;
+        }
+
+        aside .auth-area label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            color: var(--text-muted);
+            margin-bottom: 0.8rem;
+        }
+
+        /* HLAVNÍ OBSAH */
+        .wrapper {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
@@ -41,14 +114,14 @@
         .card h2 { margin-bottom: 1rem; font-size: 1.25rem; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
 
         .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
-        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
 
         .form-group { margin-bottom: 1rem; }
         .form-group label { display: block; margin-bottom: 0.4rem; color: var(--text-muted); font-size: 0.9rem; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.6rem; border-radius: 4px; border: 1px solid var(--border); background-color: var(--bg-secondary); color: var(--text); font-size: 1rem; }
         .form-group input[type="color"] { height: 40px; padding: 2px; cursor: pointer; }
         
-        .btn { background-color: var(--accent); color: #fff; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-size: 1rem; transition: 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn { background-color: var(--accent); color: #fff; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-size: 0.95rem; transition: 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; }
         .btn:hover { background-color: var(--accent-hover); }
         .btn-secondary { background-color: #444; }
         .btn-secondary:hover { background-color: #555; }
@@ -71,302 +144,303 @@
 </head>
 <body>
 
-<header>
-    <h1>3D Tisk Manager</h1>
-    <div class="auth-box">
+<aside>
+    <div class="logo-area">
+        <h1>3D Tisk Manager</h1>
+    </div>
+    <nav>
+        <button class="nav-btn active" onclick="switchTab('new-print', this)">Nový tisk</button>
+        <button class="nav-btn" onclick="switchTab('filaments', this)">Sklad filamentů</button>
+        <button class="nav-btn" onclick="switchTab('devices', this)">Zařízení</button>
+        <button class="nav-btn" onclick="switchTab('history', this)">Historie tisků</button>
+        <button class="nav-btn" onclick="switchTab('settings', this)">Nastavení</button>
+        <button class="nav-btn" onclick="switchTab('overview', this)">Přehled</button>
+    </nav>
+    <div class="auth-area">
         <label><input type="checkbox" id="rememberMe"> Zapamatovat přihlášení</label>
-        <button id="authBtn" class="btn btn-secondary btn-sm" onclick="handleAuth()">Přihlásit k Google Disku</button>
-        <span id="authStatus" style="font-size: 0.8rem; color: var(--text-muted);">Nepřihlášeno</span>
+        <button id="authBtn" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center;" onclick="handleAuth()">Přihlásit k Disku</button>
+        <div id="authStatus" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; text-align: center;">Nepřihlášeno</div>
     </div>
-</header>
+</aside>
 
-<nav>
-    <button class="active" onclick="switchTab('new-print')">Nový tisk</button>
-    <button onclick="switchTab('filaments')">Sklad filamentů</button>
-    <button onclick="switchTab('devices')">Zařízení</button>
-    <button onclick="switchTab('history')">Historie tisků</button>
-    <button onclick="switchTab('settings')">Nastavení</button>
-    <button onclick="switchTab('overview')">Přehled</button>
-</nav>
-
-<main>
-    <!-- NOVÝ TISK -->
-    <div id="tab-new-print" class="tab-content active">
-        <div class="card">
-            <h2>Kalkulačka nového tisku</h2>
-            <form id="printForm" onsubmit="calculateAndSavePrint(event)">
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>Název projektu / tisku</label>
-                        <input type="text" id="printName" required placeholder="Např. Stojan na telefon">
-                    </div>
-                    <div class="form-group">
-                        <label>Výběr zařízení</label>
-                        <select id="printDevice" required></select>
-                    </div>
-                </div>
-
-                <div class="grid-3">
-                    <div class="form-group">
-                        <label>Použitý filament</label>
-                        <select id="printFilament" required></select>
-                    </div>
-                    <div class="form-group">
-                        <label>Spotřeba materiálu (g)</label>
-                        <input type="number" id="printWeight" step="0.1" min="0" required placeholder="150">
-                    </div>
-                    <div class="form-group">
-                        <label>Doba tisku (hodiny)</label>
-                        <input type="number" id="printHours" step="0.1" min="0" required placeholder="4.5">
-                    </div>
-                </div>
-
-                <div class="grid-3">
-                    <div class="form-group">
-                        <label>Čas přípravy / práce (hodiny)</label>
-                        <input type="number" id="printPrepHours" step="0.1" min="0" value="0.5">
-                    </div>
-                    <div class="form-group">
-                        <label>Doplňkový materiál (šrouby, matky...) [Kč]</label>
-                        <input type="number" id="printExtraCost" step="1" min="0" value="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Marže / Přirážka (%)</label>
-                        <input type="number" id="printMargin" step="1" min="0" value="20">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Poznámka</label>
-                    <textarea id="printNote" rows="2" placeholder="Speciální nastavení sliceru apod."></textarea>
-                </div>
-
-                <button type="submit" class="btn">Spočítat a uložit tisk</button>
-            </form>
-        </div>
-
-        <div class="card" id="calculationResultCard" style="display: none;">
-            <h2>Výsledek kalkulace</h2>
-            <div class="grid-3">
-                <div class="stat-box">
-                    <div>Náklady na materiál</div>
-                    <div class="number" id="resMaterialCost">0 Kč</div>
-                </div>
-                <div class="stat-box">
-                    <div>Náklady na energii</div>
-                    <div class="number" id="resEnergyCost">0 Kč</div>
-                </div>
-                <div class="stat-box">
-                    <div>Náklady na přípravu</div>
-                    <div class="number" id="resPrepCost">0 Kč</div>
-                </div>
-                <div class="stat-box">
-                    <div>Doplňkový materiál</div>
-                    <div class="number" id="resExtraCost">0 Kč</div>
-                </div>
-                <div class="stat-box">
-                    <div>Amortizace zařízení</div>
-                    <div class="number" id="resAmortization">0 Kč</div>
-                </div>
-                <div class="stat-box">
-                    <div>Celkové vlastní náklady</div>
-                    <div class="number" id="resTotalCost">0 Kč</div>
-                </div>
-            </div>
-            <div style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-secondary); border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 1.2rem; font-weight: bold;">Doporučená koncová cena (s marží):</span>
-                <span id="resFinalPrice" style="font-size: 1.8rem; font-weight: bold; color: var(--success);">0 Kč</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- SKLAD FILAMENTŮ -->
-    <div id="tab-filaments" class="tab-content">
-        <div class="card">
-            <h2 id="filamentFormTitle">Přidat filament</h2>
-            <form id="filamentForm" onsubmit="saveFilament(event)">
-                <input type="hidden" id="filamentId">
-                <div class="grid-3">
-                    <div class="form-group">
-                        <label>Výrobce / Značka</label>
-                        <input type="text" id="filVendor" required placeholder="Prusa, Bambu Lab...">
-                    </div>
-                    <div class="form-group">
-                        <label>Typ materiálu</label>
-                        <input type="text" id="filType" required placeholder="PLA, PETG, ASA...">
-                    </div>
-                    <div class="form-group">
-                        <label>Název / Odstín barvy</label>
-                        <input type="text" id="filColorName" required placeholder="Galaxy Black">
-                    </div>
-                </div>
-                <div class="grid-3">
-                    <div class="form-group">
-                        <label>Barva (Color Wheel)</label>
-                        <input type="color" id="filColorHex" value="#00adb5">
-                    </div>
-                    <div class="form-group">
-                        <label>Cena za cívku (Kč)</label>
-                        <input type="number" id="filPrice" required step="1" min="0" placeholder="600">
-                    </div>
-                    <div class="form-group">
-                        <label>Aktuální zbývající hmotnost (g)</label>
-                        <input type="number" id="filWeight" required step="1" min="0" placeholder="1000">
-                    </div>
-                </div>
-                <div class="flex-actions">
-                    <button type="submit" class="btn">Uložit filament</button>
-                    <button type="button" class="btn btn-secondary" onclick="resetFilamentForm()">Zrušit</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="card">
-            <h2>Skladové zásoby filamentů</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Materiál</th>
-                        <th>Výrobce</th>
-                        <th>Barva</th>
-                        <th>Zbývá (g)</th>
-                        <th>Cena/cívka</th>
-                        <th>Akce</th>
-                    </tr>
-                </thead>
-                <tbody id="filamentTableBody"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- ZAŘÍZENÍ -->
-    <div id="tab-devices" class="tab-content">
-        <div class="card">
-            <h2 id="deviceFormTitle">Přidat zařízení</h2>
-            <form id="deviceForm" onsubmit="saveDevice(event)">
-                <input type="hidden" id="deviceId">
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>Název zařízení (Vlastní pojmenování)</label>
-                        <input type="text" id="devName" required placeholder="Tiskárna #1">
-                    </div>
-                    <div class="form-group">
-                        <label>Model zařízení</label>
-                        <input type="text" id="devModel" required placeholder="Bambu Lab X1C / Creality K1">
-                    </div>
-                </div>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>Průměrný příkon (W)</label>
-                        <input type="number" id="devPower" required min="0" step="1" placeholder="150">
-                    </div>
-                    <div class="form-group">
-                        <label>Amortizace / Opotřebení (Kč/hod)</label>
-                        <input type="number" id="devAmortization" required min="0" step="0.1" placeholder="10">
-                    </div>
-                </div>
-                <div class="flex-actions">
-                    <button type="submit" class="btn">Uložit zařízení</button>
-                    <button type="button" class="btn btn-secondary" onclick="resetDeviceForm()">Zrušit</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="card">
-            <h2>Seznam zařízení</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Název</th>
-                        <th>Model</th>
-                        <th>Příkon (W)</th>
-                        <th>Amortizace (Kč/h)</th>
-                        <th>Akce</th>
-                    </tr>
-                </thead>
-                <tbody id="deviceTableBody"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- HISTORIE TISKŮ -->
-    <div id="tab-history" class="tab-content">
-        <div class="card">
-            <h2>Historie tisků</h2>
-            <div class="search-bar">
-                <input type="text" id="historySearch" placeholder="Vyhledat v historii podle názvu nebo poznámky..." oninput="renderHistoryTable()" style="padding: 0.6rem; width: 100%; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text);">
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Datum</th>
-                        <th>Projekt</th>
-                        <th>Zařízení</th>
-                        <th>Spotřeba (g)</th>
-                        <th>Čas (h)</th>
-                        <th>Náklady</th>
-                        <th>Koncová cena</th>
-                        <th>Akce</th>
-                    </tr>
-                </thead>
-                <tbody id="historyTableBody"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- NASTAVENÍ -->
-    <div id="tab-settings" class="tab-content">
-        <div class="card">
-            <h2>Globální nastavení sazeb</h2>
-            <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
-                Změna těchto hodnot se projeví pouze u nově vytvářených tisků. U již uložených tisků v historii zůstávají zachovány původní výpočetní hodnoty.
-            </p>
-            <form onsubmit="saveSettings(event)">
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>Cena elektřiny (Kč / kWh)</label>
-                        <input type="number" id="setEnergyPrice" required step="0.1" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Hodinová sazba práce / přípravy (Kč / hod)</label>
-                        <input type="number" id="setHourlyRate" required step="1" min="0">
-                    </div>
-                </div>
-                <button type="submit" class="btn">Uložit nastavení</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- PŘEHLED -->
-    <div id="tab-overview" class="tab-content">
-        <div class="grid-2">
+<div class="wrapper">
+    <main>
+        <!-- NOVÝ TISK -->
+        <div id="tab-new-print" class="tab-content active">
             <div class="card">
-                <h2>Celkový zisk a statistiky</h2>
-                <div class="grid-2">
+                <h2>Kalkulačka nového tisku</h2>
+                <form id="printForm" onsubmit="calculateAndSavePrint(event)">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Název projektu / tisku</label>
+                            <input type="text" id="printName" required placeholder="Např. Stojan na telefon">
+                        </div>
+                        <div class="form-group">
+                            <label>Výběr zařízení</label>
+                            <select id="printDevice" required></select>
+                        </div>
+                    </div>
+
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label>Použitý filament</label>
+                            <select id="printFilament" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Spotřeba materiálu (g)</label>
+                            <input type="number" id="printWeight" step="0.1" min="0" required placeholder="150">
+                        </div>
+                        <div class="form-group">
+                            <label>Doba tisku (hodiny)</label>
+                            <input type="number" id="printHours" step="0.1" min="0" required placeholder="4.5">
+                        </div>
+                    </div>
+
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label>Čas přípravy / práce (hodiny)</label>
+                            <input type="number" id="printPrepHours" step="0.1" min="0" value="0.5">
+                        </div>
+                        <div class="form-group">
+                            <label>Doplňkový materiál (šrouby, matky...) [Kč]</label>
+                            <input type="number" id="printExtraCost" step="1" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Marže / Přirážka (%)</label>
+                            <input type="number" id="printMargin" step="1" min="0" value="20">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Poznámka</label>
+                        <textarea id="printNote" rows="2" placeholder="Speciální nastavení sliceru apod."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn">Spočítat a uložit tisk</button>
+                </form>
+            </div>
+
+            <div class="card" id="calculationResultCard" style="display: none;">
+                <h2>Výsledek kalkulace</h2>
+                <div class="grid-3">
                     <div class="stat-box">
-                        <div>Dokončené tisky</div>
-                        <div class="number" id="ovCompletedCount">0</div>
+                        <div>Náklady na materiál</div>
+                        <div class="number" id="resMaterialCost">0 Kč</div>
                     </div>
                     <div class="stat-box">
-                        <div>Čistý zisk z marže</div>
-                        <div class="number" id="ovTotalProfit">0 Kč</div>
+                        <div>Náklady na energii</div>
+                        <div class="number" id="resEnergyCost">0 Kč</div>
+                    </div>
+                    <div class="stat-box">
+                        <div>Náklady na přípravu</div>
+                        <div class="number" id="resPrepCost">0 Kč</div>
+                    </div>
+                    <div class="stat-box">
+                        <div>Doplňkový materiál</div>
+                        <div class="number" id="resExtraCost">0 Kč</div>
+                    </div>
+                    <div class="stat-box">
+                        <div>Amortizace zařízení</div>
+                        <div class="number" id="resAmortization">0 Kč</div>
+                    </div>
+                    <div class="stat-box">
+                        <div>Celkové vlastní náklady</div>
+                        <div class="number" id="resTotalCost">0 Kč</div>
                     </div>
                 </div>
-            </div>
-            <div class="card">
-                <h2>Skladové zásoby podle materiálu</h2>
-                <div id="ovMaterialStockList"></div>
+                <div style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-secondary); border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 1.2rem; font-weight: bold;">Doporučená koncová cena (s marží):</span>
+                    <span id="resFinalPrice" style="font-size: 1.8rem; font-weight: bold; color: var(--success);">0 Kč</span>
+                </div>
             </div>
         </div>
-    </div>
-</main>
+
+        <!-- SKLAD FILAMENTŮ -->
+        <div id="tab-filaments" class="tab-content">
+            <div class="card">
+                <h2 id="filamentFormTitle">Přidat filament</h2>
+                <form id="filamentForm" onsubmit="saveFilament(event)">
+                    <input type="hidden" id="filamentId">
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label>Výrobce / Značka</label>
+                            <input type="text" id="filVendor" required placeholder="Prusa, Bambu Lab...">
+                        </div>
+                        <div class="form-group">
+                            <label>Typ materiálu</label>
+                            <input type="text" id="filType" required placeholder="PLA, PETG, ASA...">
+                        </div>
+                        <div class="form-group">
+                            <label>Název / Odstín barvy</label>
+                            <input type="text" id="filColorName" required placeholder="Galaxy Black">
+                        </div>
+                    </div>
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label>Barva (Color Wheel)</label>
+                            <input type="color" id="filColorHex" value="#00adb5">
+                        </div>
+                        <div class="form-group">
+                            <label>Cena za cívku (Kč)</label>
+                            <input type="number" id="filPrice" required step="1" min="0" placeholder="600">
+                        </div>
+                        <div class="form-group">
+                            <label>Aktuální zbývající hmotnost (g)</label>
+                            <input type="number" id="filWeight" required step="1" min="0" placeholder="1000">
+                        </div>
+                    </div>
+                    <div class="flex-actions">
+                        <button type="submit" class="btn">Uložit filament</button>
+                        <button type="button" class="btn btn-secondary" onclick="resetFilamentForm()">Zrušit</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Skladové zásoby filamentů</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Materiál</th>
+                            <th>Výrobce</th>
+                            <th>Barva</th>
+                            <th>Zbývá (g)</th>
+                            <th>Cena/cívka</th>
+                            <th>Akce</th>
+                        </tr>
+                    </thead>
+                    <tbody id="filamentTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ZAŘÍZENÍ -->
+        <div id="tab-devices" class="tab-content">
+            <div class="card">
+                <h2 id="deviceFormTitle">Přidat zařízení</h2>
+                <form id="deviceForm" onsubmit="saveDevice(event)">
+                    <input type="hidden" id="deviceId">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Název zařízení (Vlastní pojmenování)</label>
+                            <input type="text" id="devName" required placeholder="Tiskárna #1">
+                        </div>
+                        <div class="form-group">
+                            <label>Model zařízení</label>
+                            <input type="text" id="devModel" required placeholder="Bambu Lab X1C / Creality K1">
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Průměrný příkon (W)</label>
+                            <input type="number" id="devPower" required min="0" step="1" placeholder="150">
+                        </div>
+                        <div class="form-group">
+                            <label>Amortizace / Opotřebení (Kč/hod)</label>
+                            <input type="number" id="devAmortization" required min="0" step="0.1" placeholder="10">
+                        </div>
+                    </div>
+                    <div class="flex-actions">
+                        <button type="submit" class="btn">Uložit zařízení</button>
+                        <button type="button" class="btn btn-secondary" onclick="resetDeviceForm()">Zrušit</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Seznam zařízení</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Název</th>
+                            <th>Model</th>
+                            <th>Příkon (W)</th>
+                            <th>Amortizace (Kč/h)</th>
+                            <th>Akce</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deviceTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- HISTORIE TISKŮ -->
+        <div id="tab-history" class="tab-content">
+            <div class="card">
+                <h2>Historie tisků</h2>
+                <div class="search-bar">
+                    <input type="text" id="historySearch" placeholder="Vyhledat v historii podle názvu nebo poznámky..." oninput="renderHistoryTable()" style="padding: 0.6rem; width: 100%; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text);">
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Projekt</th>
+                            <th>Zařízení</th>
+                            <th>Spotřeba (g)</th>
+                            <th>Čas (h)</th>
+                            <th>Náklady</th>
+                            <th>Koncová cena</th>
+                            <th>Akce</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- NASTAVENÍ -->
+        <div id="tab-settings" class="tab-content">
+            <div class="card">
+                <h2>Globální nastavení sazeb</h2>
+                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+                    Změna těchto hodnot se projeví pouze u nově vytvářených tisků. U již uložených tisků v historii zůstávají zachovány původní výpočetní hodnoty.
+                </p>
+                <form onsubmit="saveSettings(event)">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Cena elektřiny (Kč / kWh)</label>
+                            <input type="number" id="setEnergyPrice" required step="0.1" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Hodinová sazba práce / přípravy (Kč / hod)</label>
+                            <input type="number" id="setHourlyRate" required step="1" min="0">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">Uložit nastavení</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- PŘEHLED -->
+        <div id="tab-overview" class="tab-content">
+            <div class="grid-2">
+                <div class="card">
+                    <h2>Celkový zisk a statistiky</h2>
+                    <div class="grid-2">
+                        <div class="stat-box">
+                            <div>Dokončené tisky</div>
+                            <div class="number" id="ovCompletedCount">0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div>Čistý zisk z marže</div>
+                            <div class="number" id="ovTotalProfit">0 Kč</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>Skladové zásoby podle materiálu</h2>
+                    <div id="ovMaterialStockList"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
 
 <script>
-    // --- KONFIGURACE GOOGLE CLIENT ID ---
     const GOOGLE_CLIENT_ID = '356611411545-qvef11s5ll4fto21o28drt9oaqk93oij.apps.googleusercontent.com';
     const DRIVE_FILE_NAME = '3d_tisk_manager_data.json';
 
-    // --- GLOBÁLNÍ DATA APLIKACE ---
     let appData = {
         filaments: [],
         devices: [],
@@ -380,21 +454,47 @@
     let tokenClient = null;
     let accessToken = null;
 
-    // --- INICIALIZACE APLIKACE ---
     window.onload = () => {
         loadLocalData();
+        sanitizeAndMigrateData();
         renderAll();
         initGoogleAuth();
     };
 
-    function switchTab(tabId) {
+    // MIGRACE & SANITACE DATA (Opravuje 'undefined' a chybějící ID ze starších verzí)
+    function sanitizeAndMigrateData() {
+        if (!Array.isArray(appData.filaments)) appData.filaments = [];
+        if (!Array.isArray(appData.devices)) appData.devices = [];
+        if (!Array.isArray(appData.history)) appData.history = [];
+        if (!appData.settings) appData.settings = { energyPrice: 6.0, hourlyRate: 250 };
+
+        appData.filaments.forEach((f, index) => {
+            if (!f.id) f.id = 'fil_' + Date.now() + '_' + index;
+            if (f.vendor === undefined) f.vendor = f.brand || f.manufacturer || 'Neznámý';
+            if (f.type === undefined) f.type = f.material || f.materialType || 'PLA';
+            if (f.colorName === undefined) f.colorName = f.color || f.name || 'Základní';
+            if (f.colorHex === undefined) f.colorHex = f.hex || '#00adb5';
+            if (f.price === undefined) f.price = parseFloat(f.cost || f.pricePerSpool || 0);
+            if (f.weight === undefined) f.weight = parseFloat(f.weightG || f.remainingWeight || f.weightRemaining || 1000);
+        });
+
+        appData.devices.forEach((d, index) => {
+            if (!d.id) d.id = 'dev_' + Date.now() + '_' + index;
+            if (d.name === undefined) d.name = d.title || 'Zařízení ' + (index + 1);
+            if (d.model === undefined) d.model = d.printerModel || 'Nespecifikováno';
+            if (d.power === undefined) d.power = parseFloat(d.powerW || d.consumption || 150);
+            if (d.amortization === undefined) d.amortization = parseFloat(d.amortizationPerHour || d.wearCost || 0);
+        });
+
+        saveLocalData();
+    }
+
+    function switchTab(tabId, btnEl) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('aside nav button').forEach(el => el.classList.remove('active'));
         
         document.getElementById(`tab-${tabId}`).classList.add('active');
-        if (event && event.currentTarget) {
-            event.currentTarget.classList.add('active');
-        }
+        if (btnEl) btnEl.classList.add('active');
 
         if(tabId === 'overview') renderOverview();
     }
@@ -419,7 +519,6 @@
             },
         });
 
-        // Kontrola existující relace
         const savedToken = localStorage.getItem('gdrive_token') || sessionStorage.getItem('gdrive_token');
         if (savedToken) {
             accessToken = savedToken;
@@ -443,12 +542,12 @@
         const btn = document.getElementById('authBtn');
         const status = document.getElementById('authStatus');
         if (isLoggedIn) {
-            btn.textContent = 'Odhlásit z Google Disku';
+            btn.textContent = 'Odhlásit Disk';
             btn.classList.replace('btn-secondary', 'btn-danger');
             status.textContent = 'Přihlášeno k Disku';
             status.style.color = 'var(--success)';
         } else {
-            btn.textContent = 'Přihlásit k Google Disku';
+            btn.textContent = 'Přihlásit k Disku';
             btn.classList.replace('btn-danger', 'btn-secondary');
             status.textContent = 'Nepřihlášeno';
             status.style.color = 'var(--text-muted)';
@@ -471,7 +570,7 @@
                 const driveData = await fileRes.json();
                 if (driveData) {
                     appData = driveData;
-                    saveLocalData();
+                    sanitizeAndMigrateData();
                     renderAll();
                 }
             } else {
@@ -515,7 +614,6 @@
         }
     }
 
-    // --- LOKÁLNÍ ULOŽIŠTĚ ---
     function saveLocalData() {
         localStorage.setItem('3d_tisk_data', JSON.stringify(appData));
     }
@@ -547,7 +645,7 @@
         e.preventDefault();
         const id = document.getElementById('filamentId').value;
         const filament = {
-            id: id || Date.now().toString(),
+            id: id || 'fil_' + Date.now().toString(),
             vendor: document.getElementById('filVendor').value,
             type: document.getElementById('filType').value,
             colorName: document.getElementById('filColorName').value,
@@ -583,7 +681,7 @@
     function duplicateFilament(id) {
         const fil = appData.filaments.find(f => f.id === id);
         if (!fil) return;
-        const newFil = { ...fil, id: Date.now().toString(), colorName: fil.colorName + ' (Kopie)' };
+        const newFil = { ...fil, id: 'fil_' + Date.now().toString(), colorName: fil.colorName + ' (Kopie)' };
         appData.filaments.push(newFil);
         saveData();
     }
@@ -638,7 +736,7 @@
         e.preventDefault();
         const id = document.getElementById('deviceId').value;
         const device = {
-            id: id || Date.now().toString(),
+            id: id || 'dev_' + Date.now().toString(),
             name: document.getElementById('devName').value,
             model: document.getElementById('devModel').value,
             power: parseFloat(document.getElementById('devPower').value),
@@ -670,7 +768,7 @@
     function duplicateDevice(id) {
         const dev = appData.devices.find(d => d.id === id);
         if (!dev) return;
-        const newDev = { ...dev, id: Date.now().toString(), name: dev.name + ' (Kopie)' };
+        const newDev = { ...dev, id: 'dev_' + Date.now().toString(), name: dev.name + ' (Kopie)' };
         appData.devices.push(newDev);
         saveData();
     }
@@ -719,7 +817,7 @@
         });
     }
 
-    // --- NOVÝ TISK & KALKULACE ---
+    // --- KALKULAČKA ---
     function calculateAndSavePrint(e) {
         e.preventDefault();
 
@@ -740,11 +838,9 @@
         const extraCost = parseFloat(document.getElementById('printExtraCost').value) || 0;
         const marginPct = parseFloat(document.getElementById('printMargin').value) || 0;
 
-        // Použití aktuálního globálního nastavení jako SNAPSHOTU pro tento tisk
         const currentEnergyPrice = appData.settings.energyPrice;
         const currentHourlyRate = appData.settings.hourlyRate;
 
-        // Výpočty
         const materialCost = (filament.price / 1000) * weight;
         const energyCost = (device.power / 1000) * printHours * currentEnergyPrice;
         const prepCost = prepHours * currentHourlyRate;
@@ -754,12 +850,10 @@
         const marginAmount = (baseTotalCost * marginPct) / 100;
         const finalPrice = baseTotalCost + marginAmount;
 
-        // Odepsat materiál ze skladu
         filament.weight = Math.max(0, filament.weight - weight);
 
-        // Uložení tisku do historie
         const printRecord = {
-            id: Date.now().toString(),
+            id: 'print_' + Date.now().toString(),
             date: new Date().toLocaleDateString('cs-CZ'),
             name: document.getElementById('printName').value,
             deviceId: device.id,
@@ -786,7 +880,6 @@
 
         appData.history.push(printRecord);
 
-        // Zobrazit výsledek
         document.getElementById('resMaterialCost').textContent = materialCost.toFixed(1) + ' Kč';
         document.getElementById('resEnergyCost').textContent = energyCost.toFixed(1) + ' Kč';
         document.getElementById('resPrepCost').textContent = prepCost.toFixed(1) + ' Kč';
@@ -806,7 +899,7 @@
         tbody.innerHTML = '';
 
         const filtered = appData.history.filter(h => 
-            h.name.toLowerCase().includes(query) || (h.note && h.note.toLowerCase().includes(query))
+            (h.name && h.name.toLowerCase().includes(query)) || (h.note && h.note.toLowerCase().includes(query))
         );
 
         filtered.slice().reverse().forEach(h => {
@@ -832,11 +925,8 @@
         const item = appData.history.find(h => h.id === id);
         if (!item) return;
 
-        // Přepnutí na tab Nový tisk
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
-        document.getElementById('tab-new-print').classList.add('active');
-        document.querySelector('nav button').classList.add('active');
+        const navBtns = document.querySelectorAll('aside nav button');
+        switchTab('new-print', navBtns[0]);
 
         document.getElementById('printName').value = item.name + ' (Opakování)';
         if (item.deviceId) document.getElementById('printDevice').value = item.deviceId;
@@ -881,8 +971,8 @@
 
         const stockByType = {};
         appData.filaments.forEach(f => {
-            const type = f.type.toUpperCase().trim();
-            stockByType[type] = (stockByType[type] || 0) + parseFloat(f.weight);
+            const type = (f.type || 'NEZNÁMÝ').toUpperCase().trim();
+            stockByType[type] = (stockByType[type] || 0) + parseFloat(f.weight || 0);
         });
 
         const stockContainer = document.getElementById('ovMaterialStockList');
