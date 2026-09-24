@@ -21,7 +21,7 @@
       </div>
 
       <nav class="space-y-1">
-        <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-btn active w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:bg-slate-700">
+        <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-btn active w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:bg-slate-700 bg-slate-700 font-bold">
           <i class="fa-solid fa-chart-pie w-5 text-indigo-400"></i> Přehled
         </button>
         <button onclick="switchTab('filaments')" id="btn-filaments" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:bg-slate-700">
@@ -271,7 +271,7 @@
 
   </main>
 
-  <!-- Aplikační Skript -->
+  <!-- JavaScript pro aplikaci a synchronizaci s Google Diskem -->
   <script>
     const CLIENT_ID = '809838810281-7a80lk1p3b4uimv7pet1q9v3p5fsbdjm.apps.googleusercontent.com';
     const SCOPES = 'https://www.googleapis.com/auth/drive.file';
@@ -291,14 +291,12 @@
       }
     };
 
-    // Inicializace aplikace
     window.addEventListener('DOMContentLoaded', () => {
       loadLocal();
       renderAll();
       initGis();
     });
 
-    // Google Identity Services (GIS) init
     function initGis() {
       if (typeof google !== 'undefined' && google.accounts) {
         tokenClient = google.accounts.oauth2.initTokenClient({
@@ -344,7 +342,6 @@
       }
     }
 
-    // Google Drive Sync
     async function syncFromDrive() {
       document.getElementById('sync-status').textContent = 'Načítám z Disku...';
       try {
@@ -414,7 +411,6 @@
       }
     }
 
-    // Lokální paměť
     function saveLocal() {
       localStorage.setItem('3d_tisk_data', JSON.stringify(appData));
     }
@@ -426,7 +422,6 @@
       }
     }
 
-    // Navigace
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('bg-slate-700', 'font-bold'));
@@ -435,7 +430,6 @@
       document.getElementById(`btn-${tabId}`).classList.add('bg-slate-700', 'font-bold');
     }
 
-    // Renderování dat
     function renderAll() {
       renderDashboard();
       renderFilaments();
@@ -555,16 +549,9 @@
 
       const totalHours = hours + (mins / 60);
 
-      // 1. Náklady na materiál
       const matCost = filament ? (weight * filament.pricePerGram) : 0;
-
-      // 2. Náklady na energii
       const energyCost = printer ? ((printer.power / 1000) * totalHours * (appData.settings.electricityPrice || 6.0)) : 0;
-
-      // 3. Opotřebení
       const wearCost = printer ? (totalHours * printer.wear) : 0;
-
-      // 4. Práce
       const laborCost = (workMins / 60) * (appData.settings.laborRate || 250);
 
       const totalCost = matCost + energyCost + wearCost + laborCost;
