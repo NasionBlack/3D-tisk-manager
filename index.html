@@ -392,7 +392,9 @@
         document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
         
         document.getElementById(`tab-${tabId}`).classList.add('active');
-        event.currentTarget.classList.add('active');
+        if (event && event.currentTarget) {
+            event.currentTarget.classList.add('active');
+        }
 
         if(tabId === 'overview') renderOverview();
     }
@@ -410,7 +412,6 @@
                     const remember = document.getElementById('rememberMe').checked;
                     const storage = remember ? localStorage : sessionStorage;
                     storage.setItem('gdrive_token', accessToken);
-                    storage.setItem('gdrive_remember', remember ? 'true' : 'false');
                     
                     updateAuthUI(true);
                     syncWithDrive();
@@ -429,7 +430,6 @@
 
     function handleAuth() {
         if (accessToken) {
-            // Odhlásit
             accessToken = null;
             localStorage.removeItem('gdrive_token');
             sessionStorage.removeItem('gdrive_token');
@@ -458,7 +458,6 @@
     async function syncWithDrive() {
         if (!accessToken) return;
         try {
-            // Hledání souboru na Disku
             const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${DRIVE_FILE_NAME}' and trashed=false`, {
                 headers: { Authorization: `Bearer ${accessToken}` }
             });
@@ -746,7 +745,7 @@
         const currentHourlyRate = appData.settings.hourlyRate;
 
         // Výpočty
-        const materialCost = (filament.price / 1000) * weight; // předpokládáme cívku 1000g pro výpočet ceny/g
+        const materialCost = (filament.price / 1000) * weight;
         const energyCost = (device.power / 1000) * printHours * currentEnergyPrice;
         const prepCost = prepHours * currentHourlyRate;
         const amortizationCost = device.amortization * printHours;
@@ -773,7 +772,6 @@
             extraCost,
             marginPct,
             note: document.getElementById('printNote').value,
-            // Snapshot nákladů
             costs: {
                 materialCost,
                 energyCost,
@@ -811,7 +809,7 @@
             h.name.toLowerCase().includes(query) || (h.note && h.note.toLowerCase().includes(query))
         );
 
-        filtered.reverse().forEach(h => {
+        filtered.slice().reverse().forEach(h => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${h.date}</td>
@@ -834,7 +832,11 @@
         const item = appData.history.find(h => h.id === id);
         if (!item) return;
 
-        switchTab('new-print');
+        // Přepnutí na tab Nový tisk
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-new-print').classList.add('active');
+        document.querySelector('nav button').classList.add('active');
 
         document.getElementById('printName').value = item.name + ' (Opakování)';
         if (item.deviceId) document.getElementById('printDevice').value = item.deviceId;
@@ -872,14 +874,11 @@
 
     // --- PŘEHLED ---
     function renderOverview() {
-        // Počet tisků
         document.getElementById('ovCompletedCount').textContent = appData.history.length;
 
-        // Celkový zisk POUZE z marže (přirážky)
         const totalProfit = appData.history.reduce((sum, h) => sum + (h.costs.marginAmount || 0), 0);
         document.getElementById('ovTotalProfit').textContent = Math.round(totalProfit) + ' Kč';
 
-        // Součet gramů podle typu filamentu (bez ohledu na barvu)
         const stockByType = {};
         appData.filaments.forEach(f => {
             const type = f.type.toUpperCase().trim();
