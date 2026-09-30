@@ -18,6 +18,7 @@
             --border: #333333;
             --danger: #ff5252;
             --success: #4caf50;
+            --success-hover: #388e3c;
             --sidebar-width: 240px;
         }
 
@@ -129,6 +130,8 @@
         .btn-secondary:hover { background-color: #555; }
         .btn-danger { background-color: var(--danger); }
         .btn-danger:hover { background-color: #d32f2f; }
+        .btn-success { background-color: var(--success); }
+        .btn-success:hover { background-color: var(--success-hover); }
         .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.85rem; }
 
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 4px; border: 1px solid var(--border); margin-top: 1rem; }
@@ -241,7 +244,7 @@
         <div id="tab-new-print" class="tab-content active">
             <div class="card">
                 <h2>Kalkulačka nového tisku</h2>
-                <form id="printForm" onsubmit="calculateAndSavePrint(event)">
+                <form id="printForm" onsubmit="calculatePrint(event)">
                     <div class="grid-2">
                         <div class="form-group">
                             <label>Název projektu / tisku</label>
@@ -263,15 +266,21 @@
                             <input type="number" id="printWeight" step="0.1" min="0" required placeholder="150">
                         </div>
                         <div class="form-group">
-                            <label>Doba tisku (hodiny)</label>
-                            <input type="number" id="printHours" step="0.1" min="0" required placeholder="4.5">
+                            <label>Doba tisku</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="printHours" min="0" step="1" required placeholder="Hod" style="flex: 1;">
+                                <input type="number" id="printMinutes" min="0" max="59" step="1" required placeholder="Min" value="0" style="flex: 1;">
+                            </div>
                         </div>
                     </div>
 
                     <div class="grid-3">
                         <div class="form-group">
-                            <label>Čas přípravy / práce (hodiny)</label>
-                            <input type="number" id="printPrepHours" step="0.1" min="0" value="0.5">
+                            <label>Čas přípravy / práce</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="printPrepHours" min="0" step="1" placeholder="Hod" value="0" style="flex: 1;">
+                                <input type="number" id="printPrepMinutes" min="0" max="59" step="1" placeholder="Min" value="30" style="flex: 1;">
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>Doplňkový materiál (šrouby, matky...) [Kč]</label>
@@ -288,7 +297,7 @@
                         <textarea id="printNote" rows="2" placeholder="Speciální nastavení sliceru apod."></textarea>
                     </div>
 
-                    <button type="submit" class="btn">Spočítat a uložit tisk</button>
+                    <button type="submit" class="btn">Spočítat</button>
                 </form>
             </div>
 
@@ -323,6 +332,9 @@
                 <div style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-secondary); border-radius: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                     <span style="font-size: 1.2rem; font-weight: bold;">Doporučená koncová cena (s marží):</span>
                     <span id="resFinalPrice" style="font-size: 1.8rem; font-weight: bold; color: var(--success);">0 Kč</span>
+                </div>
+                <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+                    <button type="button" id="savePrintBtn" class="btn btn-success" onclick="saveCalculatedPrint()">Uložit tisk</button>
                 </div>
             </div>
         </div>
@@ -526,6 +538,7 @@
         }
     };
 
+    let currentCalculatedPrint = null;
     let tokenClient = null;
     let accessToken = null;
 
@@ -542,7 +555,6 @@
         if (!Array.isArray(appData.history)) appData.history = [];
         if (!appData.settings) appData.settings = { energyPrice: 6.0, hourlyRate: 250 };
         
-        // Odstranění googleClientId z paměti, pokud tam historicky zůstalo
         if (appData.settings.googleClientId) {
             delete appData.settings.googleClientId;
         }
@@ -922,8 +934,8 @@
     }
 
     // --- KALKULAČKA ---
-    function calculateAndSavePrint(e) {
-        e.preventDefault();
+    function calculatePrint(e) {
+        if (e) e.preventDefault();
 
         const filId = document.getElementById('printFilament').value;
         const devId = document.getElementById('printDevice').value;
@@ -936,9 +948,16 @@
             return;
         }
 
-        const weight = parseFloat(document.getElementById('printWeight').value);
-        const printHours = parseFloat(document.getElementById('printHours').value);
-        const prepHours = parseFloat(document.getElementById('printPrepHours').value);
+        const weight = parseFloat(document.getElementById('printWeight').value) || 0;
+        
+        const printHours = parseFloat(document.getElementById('printHours').value) || 0;
+        const printMinutes = parseFloat(document.getElementById('printMinutes').value) || 0;
+        const totalPrintHours = printHours + (printMinutes / 60);
+
+        const prepHours = parseFloat(document.getElementById('printPrepHours').value) || 0;
+        const prepMinutes = parseFloat(document.getElementById('printPrepMinutes').value) || 0;
+        const totalPrepHours = prepHours + (prepMinutes / 60);
+
         const extraCost = parseFloat(document.getElementById('printExtraCost').value) || 0;
         const marginPct = parseFloat(document.getElementById('printMargin').value) || 0;
 
@@ -946,34 +965,13 @@
         const currentHourlyRate = appData.settings.hourlyRate;
 
         const materialCost = (filament.price / 1000) * weight;
-        const energyCost = (device.power / 1000) * printHours * currentEnergyPrice;
-        const prepCost = prepHours * currentHourlyRate;
-        const amortizationCost = device.amortization * printHours;
+        const energyCost = (device.power / 1000) * totalPrintHours * currentEnergyPrice;
+        const prepCost = totalPrepHours * currentHourlyRate;
+        const amortizationCost = device.amortization * totalPrintHours;
 
         const baseTotalCost = materialCost + energyCost + prepCost + extraCost + amortizationCost;
         const marginAmount = (baseTotalCost * marginPct) / 100;
         const finalPrice = baseTotalCost + marginAmount;
-
-        filament.weight = Math.max(0, filament.weight - weight);
-
-        const printRecord = {
-            id: 'print_' + Date.now().toString(),
-            date: new Date().toLocaleDateString('cs-CZ'),
-            name: document.getElementById('printName').value,
-            deviceId: device.id,
-            deviceName: device.name,
-            filamentId: filament.id,
-            filamentName: `${filament.vendor} ${filament.type} (${filament.colorName})`,
-            weight,
-            printHours,
-            prepHours,
-            extraCost,
-            marginPct,
-            note: document.getElementById('printNote').value,
-            costs: { materialCost, energyCost, prepCost, amortizationCost, extraCost, baseTotalCost, marginAmount, finalPrice }
-        };
-
-        appData.history.push(printRecord);
 
         document.getElementById('resMaterialCost').textContent = materialCost.toFixed(1) + ' Kč';
         document.getElementById('resEnergyCost').textContent = energyCost.toFixed(1) + ' Kč';
@@ -982,12 +980,74 @@
         document.getElementById('resAmortization').textContent = amortizationCost.toFixed(1) + ' Kč';
         document.getElementById('resTotalCost').textContent = baseTotalCost.toFixed(1) + ' Kč';
         document.getElementById('resFinalPrice').textContent = Math.round(finalPrice) + ' Kč';
-        document.getElementById('calculationResultCard').style.display = 'block';
 
+        currentCalculatedPrint = {
+            name: document.getElementById('printName').value,
+            deviceId: device.id,
+            deviceName: device.name,
+            filamentId: filament.id,
+            filamentName: `${filament.vendor} ${filament.type} (${filament.colorName})`,
+            weight,
+            printHours: totalPrintHours,
+            prepHours: totalPrepHours,
+            extraCost,
+            marginPct,
+            note: document.getElementById('printNote').value,
+            costs: { materialCost, energyCost, prepCost, amortizationCost, extraCost, baseTotalCost, marginAmount, finalPrice }
+        };
+
+        const saveBtn = document.getElementById('savePrintBtn');
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Uložit tisk';
+            saveBtn.style.opacity = '1';
+        }
+
+        document.getElementById('calculationResultCard').style.display = 'block';
+    }
+
+    function saveCalculatedPrint() {
+        if (!currentCalculatedPrint) {
+            alert('Nejprve proveďte výpočet.');
+            return;
+        }
+
+        const filId = currentCalculatedPrint.filamentId;
+        const filament = appData.filaments.find(f => String(f.id).trim() === String(filId).trim());
+
+        if (filament) {
+            filament.weight = Math.max(0, filament.weight - currentCalculatedPrint.weight);
+        }
+
+        const printRecord = {
+            id: 'print_' + Date.now().toString(),
+            date: new Date().toLocaleDateString('cs-CZ'),
+            ...currentCalculatedPrint
+        };
+
+        appData.history.push(printRecord);
         saveData();
+
+        const saveBtn = document.getElementById('savePrintBtn');
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Uloženo ✓';
+            saveBtn.style.opacity = '0.7';
+        }
+
+        alert('Tisk byl úspěšně uložen do historie a materiál odečten ze skladu.');
     }
 
     // --- HISTORIE TISKŮ ---
+    function formatDuration(decimalHours) {
+        if (!decimalHours) return '0 h';
+        const h = Math.floor(decimalHours);
+        const m = Math.round((decimalHours - h) * 60);
+        if (m === 0) return `${h} h`;
+        if (h === 0) return `${m} min`;
+        return `${h} h ${m} min`;
+    }
+
     function renderHistoryTable() {
         const tbody = document.getElementById('historyTableBody');
         const query = document.getElementById('historySearch').value.toLowerCase();
@@ -1009,7 +1069,7 @@
                 <td><strong>${h.name}</strong><br><small style="color:var(--text-muted)">${h.note || ''}</small></td>
                 <td>${h.deviceName}</td>
                 <td>${h.weight} g</td>
-                <td>${h.printHours} h</td>
+                <td>${formatDuration(h.printHours)}</td>
                 <td>${Math.round(h.costs.baseTotalCost)} Kč</td>
                 <td><strong style="color:var(--success)">${Math.round(h.costs.finalPrice)} Kč</strong></td>
                 <td>
@@ -1032,13 +1092,25 @@
         if (item.deviceId) document.getElementById('printDevice').value = item.deviceId;
         if (item.filamentId) document.getElementById('printFilament').value = item.filamentId;
         document.getElementById('printWeight').value = item.weight;
-        document.getElementById('printHours').value = item.printHours;
-        document.getElementById('printPrepHours').value = item.prepHours;
+
+        const totalPrintHours = item.printHours || 0;
+        const pHours = Math.floor(totalPrintHours);
+        const pMins = Math.round((totalPrintHours - pHours) * 60);
+        document.getElementById('printHours').value = pHours;
+        document.getElementById('printMinutes').value = pMins;
+
+        const totalPrepHours = item.prepHours || 0;
+        const prepH = Math.floor(totalPrepHours);
+        const prepM = Math.round((totalPrepHours - prepH) * 60);
+        document.getElementById('printPrepHours').value = prepH;
+        document.getElementById('printPrepMinutes').value = prepM;
+
         document.getElementById('printExtraCost').value = item.extraCost || 0;
         document.getElementById('printMargin').value = item.marginPct || 20;
         document.getElementById('printNote').value = item.note || '';
 
         document.getElementById('calculationResultCard').style.display = 'none';
+        currentCalculatedPrint = null;
     }
 
     function deleteHistoryItem(id) {
